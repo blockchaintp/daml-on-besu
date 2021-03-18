@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Copyright 2020 Blockchain Technology Partners
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>daml-on-besu</groupId>
+    <artifactId>daml-on-besu</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>besu</artifactId>
+  <name>${project.groupId}:${project.artifactId}</name>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <description>Implementation of DAML Ledger API Server with a Besu backend</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>daml-on-besu</groupId>
+      <artifactId>daml-protobufs</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+  <!-- https://mvnrepository.com/artifact/org.web3j/eea -->
+    <dependency>
+      <groupId>org.web3j</groupId>
+      <artifactId>core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <version>4.1.48.Final</version>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.besu.internal</groupId>
+      <artifactId>besu</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.besu.internal</groupId>
+      <artifactId>config</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.besu.internal</groupId>
+      <artifactId>core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.besu.internal</groupId>
+      <artifactId>crypto</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.besu.internal</groupId>
+      <artifactId>enclave</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.besu.internal</groupId>
+      <artifactId>kvstore</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.besu.internal</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.besu.internal</groupId>
+      <artifactId>rlp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.besu.internal</groupId>
+      <artifactId>trie</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.daml</groupId>
+      <artifactId>participant-state_${scala.lang.version}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.daml</groupId>
+      <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.daml</groupId>
+      <artifactId>participant-state-index_${scala.lang.version}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.daml</groupId>
+      <artifactId>ledger-api-auth_${scala.lang.version}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.daml</groupId>
+      <artifactId>sandbox_${scala.lang.version}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java-util</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tuweni</groupId>
+      <artifactId>tuweni-bytes</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tuweni</groupId>
+      <artifactId>tuweni-units</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>info.picocli</groupId>
+      <artifactId>picocli</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

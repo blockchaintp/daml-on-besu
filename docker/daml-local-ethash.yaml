@@ -1,0 +1,498 @@
+---
+# Copyright 2020 Blockchain Technology Partners
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: "2.1"
+
+services:
+  #
+  # Transient containers: genesis and key pair generators for besu and orion
+  # containers
+  #
+  ethash-genesis:
+    image: besu:$ISOLATION_ID
+    mem_limit: 100m
+    entrypoint:
+      - bash
+      - -xc
+      - |
+        \"
+        if [ ! -d /networkFiles ]; then
+          rm -rf /data/keys/*
+          mkdir /networkFiles
+          cd /genesis
+          /opt/besu/bin/besu operator generate-blockchain-config \
+            --config-file=/genesis/ethashConfigFile.json \
+            --to=/networkFiles --private-key-file-name=key
+          cd /networkFiles/keys
+
+          count=0
+          for d in $$(find /networkFiles/keys/ -maxdepth 1 -type d|grep 0x); do
+            name=besu-$$count
+            mv $$d/key /data/$$name/
+            mv $$d/key.pub /data/$$name/
+            cp -R /data/$$name/ /data/keys
+            cp /networkFiles/genesis.json /data/$$name/
+            count=$$(( $$count + 1 ))
+          done
+
+          echo [ > /tmp/static-nodes.json
+          count=0
+          for d in $$(find /networkFiles/keys/ -maxdepth 1 -type d|grep 0x); do
+            name=besu-$$count
+            key=$$(cat /data/$$name/key.pub | sed -e 's/0x//')
+            ip=$$(( $$count + 2))
+            enodeurl=enode://$$key@172.13.0.$$ip:30303
+            if [ $$count -gt 0 ]; then
+              printf ',\n' >> /tmp/static-nodes.json
+            fi
+            printf \"$$enodeurl\" >> /tmp/static-nodes.json
+            count=$$(( $$count + 1 ))
+          done
+          echo ] >> /tmp/static-nodes.json
+          count=0
+          for d in $$(find /networkFiles/keys/ -maxdepth 1 -type d|grep 0x); do
+            name=besu-$$count
+            cp /tmp/static-nodes.json /data/$$name/
+            count=$$(( $$count + 1 ))
+          done
+        fi
+        \"
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
+      - besu-0:/data/besu-0
+      - besu-1:/data/besu-1
+      - besu-2:/data/besu-2
+      - ../orion-keys:/data/keys
+      - ../genesis:/genesis
+
+  orion-0-keygen:
+    image: pegasyseng/orion:1.5
+    entrypoint:
+      - bash
+      - -xc
+      - |
+        \"
+        if [ ! -d "/data/keys" ]; then
+          mkdir -p /data/keys && cd /data/keys
+          echo | /opt/orion/bin/orion -g nodeKey
+          (cat nodeKey.pub; echo) >> /keys/public-keys
+
+          name="orion-0"
+          participant="besu-0"
+          file=/keys/$$name.json
+
+          echo "    {" > $$file
+          echo "      \"name\": \"$$name\"," >> $$file
+          echo "      \"participant\": \"$$participant\"," >> $$file
+          (echo -n "      \"publicKey\": \""; cat nodeKey.pub; echo "\"") \
+            >> $$file
+          echo "    }," >> $$file
+        fi
+        \"
+    volumes:
+      - orion-0:/data
+      - ../orion-keys:/keys
+    depends_on:
+      - ethash-genesis
+
+  orion-1-keygen:
+    image: pegasyseng/orion:1.5
+    entrypoint:
+      - bash
+      - -xc
+      - |
+        \"
+        if [ ! -d "/data/keys" ]; then
+          mkdir -p /data/keys && cd /data/keys
+          echo | /opt/orion/bin/orion -g nodeKey
+          (cat nodeKey.pub; echo) >> /keys/public-keys
+
+          name="orion-1"
+          participant="bob"
+          file=/keys/$$name.json
+
+          echo "    {" > $$file
+          echo "      \"name\": \"$$name\"," >> $$file
+          echo "      \"participant\": \"$$participant\"," >> $$file
+          (echo -n "      \"publicKey\": \""; cat nodeKey.pub; echo "\"") \
+            >> $$file
+          echo "    }," >> $$file
+        fi
+        \"
+    volumes:
+      - orion-1:/data
+      - ../orion-keys:/keys
+    depends_on:
+      - orion-0-keygen
+
+  orion-2-keygen:
+    image: pegasyseng/orion:1.5
+    entrypoint:
+      # note that the last orion instance must omit the comma at the end of the
+      # JSON snippet it generates
+      - bash
+      - -xc
+      - |
+        \"
+        if [ ! -d "/data/keys" ]; then
+          mkdir -p /data/keys && cd /data/keys
+          echo | /opt/orion/bin/orion -g nodeKey
+          (cat nodeKey.pub; echo) >> /keys/public-keys
+
+          name="orion-2"
+          participant="carol"
+          file=/keys/$$name.json
+
+          echo "    {" > $$file
+          echo "      \"name\": \"$$name\"," >> $$file
+          echo "      \"participant\": \"$$participant\"," >> $$file
+          (echo -n "      \"publicKey\": \""; cat nodeKey.pub; echo "\"") \
+            >> $$file
+          echo "    }" >> $$file
+         fi
+        \"
+    volumes:
+      - orion-2:/data
+      - ../orion-keys:/keys
+    depends_on:
+      - orion-1-keygen
+
+  repeater-config-gen:
+    image: pegasyseng/orion:1.5
+    mem_limit: 100m
+    entrypoint:
+      - bash
+      - -xc
+      - |
+        \"
+        sleep 10
+        if [ ! -d "/data/keys" ]; then
+          file=/keys/repeater-config.json
+          echo { > $$file
+          echo "  \"participants\": [" >> $$file
+          for f in "/keys/orion-*.json"
+          do
+            cat $$f >> $$file
+          done
+          echo "  ]" >> $$file
+          echo } >> $$file
+        fi
+        \"
+    volumes:
+      - ../orion-keys:/keys
+    depends_on:
+      - orion-2-keygen
+
+  #
+  # Non-transient containers
+  #
+  postgres:
+    image: postgres
+    mem_limit: 100m
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data/pgdata
+      - ../postgres/init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql
+    hostname: postgres
+    networks:
+      local_net:
+        ipv4_address: "172.13.0.42"
+
+  private-rpc-0:
+    image: private-rpc:$ISOLATION_ID
+    mem_limit: 500m
+    ports:
+      - "9000:9000"
+    entrypoint: "bash -xc \"\
+      sleep 30 && \
+      /opt/daml-on-besu/private-rpc/entrypoint.sh \
+      --json-rpc-url http://besu-0:8545 \
+      --participant port=9000,address=0.0.0.0,participant-id=besu-0,server-jdbc-url=jdbc:postgresql://postgres/pvtrpc0?user=postgres \
+      --use-private-reader-writer false \
+      --committer-participant-id besu-0 \
+      --json-config-file /data/keys/repeater-config.json \
+      --private-key-file /data/keys/besu-0/key \
+      --ledger-id test \
+      --chain-id 1981 \
+      --logging debug \
+      \""
+    depends_on:
+      - besu-0
+    volumes:
+      - ../test-dars:/opt/daml-on-besu-0/dar/
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
+      - ../orion-keys:/data/keys
+    hostname: private-reader-writer-0
+    networks:
+      local_net:
+        ipv4_address: "172.13.0.52"
+
+  # Bootnode, i.e. the initial node in the network
+  besu-0:
+    image: besu:$ISOLATION_ID
+    mem_limit: 500m
+    environment:
+      - JAVA_ARGS=-Dvertx.disableFileCPResolving=true -Dlog4j.shutdownHookEnabled=false --add-opens java.base/sun.security.provider=ALL-UNNAMED
+      - LOG4J_CONFIGURATION_FILE=/opt/daml-on-besu/besu/log4j2.xml
+    entrypoint:
+      - bash
+      - -xc
+      - |
+        \"
+        # wait for genesis to complete
+        sleep 15 &&
+        /opt/daml-on-besu/besu/entrypoint.sh \
+          --data-path=/data \
+          --discovery-enabled=false \
+          --genesis-file=/data/genesis.json \
+          --host-whitelist=* \
+          --logging=debug \
+          --min-gas-price=0 \
+          --miner-coinbase=fe3b557e8fb62b89f4916b721be55ceb828dbd73 \
+          --miner-enabled \
+          --p2p-host=0.0.0.0 \
+          --node-private-key-file=/data/key \
+          --privacy-enabled \
+          --privacy-public-key-file=/data/orion/keys/nodeKey.pub \
+          --privacy-url=http://orion-0:8888 \
+          --rpc-http-api=EEA,ETH,NET,WEB3,TXPOOL,MINER,ADMIN,PRIV \
+          --rpc-http-cors-origins=* \
+          --rpc-http-host=0.0.0.0 \
+          --rpc-http-enabled \
+          --rpc-ws-api=EEA,ETH,NET,WEB3,TXPOOL,MINER,ADMIN,PRIV \
+          --rpc-ws-host=0.0.0.0 \
+          --rpc-ws-enabled
+        \"
+    depends_on:
+      - ethash-genesis
+    ports:
+      - 8545:8545
+      - 8546:8546
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
+      - besu-0:/data
+      - orion-0:/data/orion
+      - ../genesis:/genesis
+    hostname: besu-0
+    networks:
+      local_net:
+        ipv4_address: "172.13.0.2"
+
+  besu-1:
+    image: besu:$ISOLATION_ID
+    mem_limit: 500m
+    environment:
+      - JAVA_ARGS=-Dvertx.disableFileCPResolving=true -Dlog4j.shutdownHookEnabled=false --add-opens java.base/sun.security.provider=ALL-UNNAMED
+    entrypoint:
+      - bash
+      - -xc
+      - |
+        \"
+        # wait for genesis to complete
+        sleep 15 &&
+        /opt/daml-on-besu/besu/entrypoint.sh \
+          --data-path=/data \
+          --genesis-file=/data/genesis.json \
+          --node-private-key-file=/data/key \
+          --privacy-enabled \
+          --privacy-url=http://orion-1:8888 \
+          --privacy-public-key-file=/data/orion/keys/nodeKey.pub \
+          --rpc-http-enabled \
+          --rpc-http-host=0.0.0.0 \
+          --p2p-host=0.0.0.0 \
+          --rpc-http-api=ETH,NET,WEB3,TXPOOL,MINER,ADMIN,PRIV \
+          --rpc-http-cors-origins=* \
+          --host-whitelist=*
+        \"
+    depends_on:
+      - besu-0
+      - orion-0
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
+      - besu-1:/data
+      - orion-1:/data/orion
+      - ../genesis:/genesis
+    hostname: besu-1
+    networks:
+      local_net:
+        ipv4_address: "172.13.0.3"
+
+  besu-2:
+    image: besu:$ISOLATION_ID
+    mem_limit: 500m
+    environment:
+      - JAVA_ARGS=-Dvertx.disableFileCPResolving=true -Dlog4j.shutdownHookEnabled=false --add-opens java.base/sun.security.provider=ALL-UNNAMED
+    entrypoint:
+      - bash
+      - -xc
+      - |
+        \"
+        # wait for genesis to complete
+        sleep 15 &&
+        /opt/daml-on-besu/besu/entrypoint.sh \
+          --data-path=/data \
+          --genesis-file=/data/genesis.json \
+          --node-private-key-file=/data/key \
+          --privacy-enabled \
+          --privacy-url=http://orion-2:8888 \
+          --privacy-public-key-file=/data/orion/keys/nodeKey.pub \
+          --rpc-http-enabled \
+          --rpc-http-host=0.0.0.0 \
+          --p2p-host=0.0.0.0 \
+          --rpc-http-api=ETH,NET,WEB3,TXPOOL,MINER,ADMIN,PRIV \
+          --rpc-http-cors-origins=* \
+          --host-whitelist=*
+        \"
+    depends_on:
+      - besu-1
+      - orion-1
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
+      - besu-2:/data
+      - orion-2:/data/orion
+      - ../genesis:/genesis
+    hostname: besu-2
+    networks:
+      local_net:
+        ipv4_address: "172.13.0.4"
+
+  orion-0:
+    image: pegasyseng/orion:1.5
+    mem_limit: 250m
+    environment:
+      - ORION_OTHERNODES=http://orion-1:8080/,http://orion-2:8080/
+      - ORION_NODEURL=http://orion-0:8080/
+      - ORION_CLIENTURL=http://orion-0:8888/
+      - LOG4J_CONFIGURATION_FILE=/opt/orion/log4j2.xml
+    entrypoint:
+      - bash
+      - -xc
+      - sleep 5 && /opt/orion/bin/orion /opt/orion/config/orion.conf
+    depends_on:
+      - orion-0-keygen
+    ports:
+      - 8888:8888
+    volumes:
+      - ../config/orion/orion.conf:/opt/orion/config/orion.conf
+      - ../config/orion/log4j2.xml:/opt/orion/log4j2.xml
+      - orion-0:/data
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
+    hostname: orion-0
+    networks:
+      local_net:
+        ipv4_address: "172.13.0.22"
+
+  orion-1:
+    image: pegasyseng/orion:1.5
+    mem_limit: 250m
+    environment:
+      - ORION_OTHERNODES=http://orion-0:8080/,http://orion-2:8080/
+      - ORION_NODEURL=http://orion-1:8080/
+      - ORION_CLIENTURL=http://orion-1:8888/
+    entrypoint:
+      - bash
+      - -xc
+      - sleep 5 && /opt/orion/bin/orion /opt/orion/config/orion.conf
+    depends_on:
+      - orion-1-keygen
+    volumes:
+      - ../config/orion/orion.conf:/opt/orion/config/orion.conf
+      - orion-1:/data
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
+    hostname: orion-1
+    networks:
+      local_net:
+        ipv4_address: "172.13.0.23"
+
+  orion-2:
+    image: pegasyseng/orion:1.5
+    mem_limit: 250m
+    environment:
+      - ORION_OTHERNODES=http://orion-0:8080/,http://orion-1:8080/
+      - ORION_NODEURL=http://orion-2:8080/
+      - ORION_CLIENTURL=http://orion-2:8888/
+    entrypoint:
+      - bash
+      - -xc
+      - sleep 5 && /opt/orion/bin/orion /opt/orion/config/orion.conf
+    depends_on:
+      - orion-2-keygen
+    volumes:
+      - ../config/orion/orion.conf:/opt/orion/config/orion.conf
+      - orion-2:/data
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
+    hostname: orion-2
+    networks:
+      local_net:
+        ipv4_address: "172.13.0.24"
+
+  repeater:
+    image: repeater:$ISOLATION_ID
+    mem_limit: 250m
+    entrypoint:
+      - bash
+      - -xc
+      - |
+        \"
+        sleep 30 && \
+        /opt/daml-on-besu/repeater/entrypoint.sh \
+          --json-config-file /data/keys/repeater-config.json \
+          --jdbc-url jdbc:postgresql://postgres/postgres?user=postgres \
+          --besu-json-rpc-url http://besu-0:8545 \
+          --besu-private-key-file /data/keys/besu-0/key \
+          --private-from "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63" \
+          --chain-id 1981 \
+          --participant-id besu-0 \
+          --logging debug
+        \"
+    depends_on:
+      - besu-0
+      - orion-0
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
+      - ../orion-keys:/data/keys
+    hostname: repeater
+    networks:
+      local_net:
+        ipv4_address: "172.13.0.32"
+
+networks:
+  local_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.13.0.0/16
+
+volumes:
+  pgdata:
+  besu-0:
+  besu-1:
+  besu-2:
+  orion-0:
+  orion-1:
+  orion-2:
+  repeater:

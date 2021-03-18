@@ -1,0 +1,267 @@
+---
+# Copyright 2020 Blockchain Technology Partners
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: "2.1"
+
+services:
+  postgres:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - DAML_DBS=rpc0 rpc1 rpc2 rpc3
+    volumes:
+      - pgdata:/var/lib/postgresql/data/pgdata
+      - ../postgres:/docker-entrypoint-initdb.d
+
+  # Bootnode, i.e. the initial node in the network
+  besu-0:
+    image: &besu-image besu:$ISOLATION_ID
+    ports:
+      - "8545:8545"
+    environment:
+      - &besu_java_args JAVA_ARGS=-Dvertx.disableFileCPResolving=true -Dlog4j.shutdownHookEnabled=false --add-opens java.base/sun.security.provider=ALL-UNNAMED
+      - &besu_log LOG4J_CONFIGURATION_FILE=/opt/daml-on-besu/besu/log4j2.xml
+      - &besu_peer_port BESU_ENODE_PORT=30303
+      - LOG_LEVEL=warn
+    entrypoint: &besu_command
+      - bash
+      - -c
+      - |
+        while [ ! -r /config/genesis.done ]; do
+          sleep 1;
+        done
+        /opt/daml-on-besu/besu/entrypoint.sh \
+          --data-path=/data \
+          --genesis-file=/data/genesis.json \
+          --logging=$$LOG_LEVEL \
+          --rpc-http-enabled \
+          --rpc-http-host=0.0.0.0 \
+          --discovery-enabled=false \
+          --p2p-host=0.0.0.0 \
+          --rpc-http-api=ETH,NET,WEB3,TXPOOL,MINER,ADMIN,IBFT \
+          --rpc-http-cors-origins=* \
+          --host-whitelist=* \
+          --min-gas-price=0
+    volumes:
+      - &random /dev/urandom:/dev/random
+      - &urandom /dev/urandom:/dev/urandom
+      - &config config:/config
+      - besu-0:/data
+    depends_on:
+      - genesis
+
+  besu-1:
+    image: *besu-image
+    environment:
+      - *besu_java_args
+      - *besu_log
+      - *besu_peer_port
+      - LOG_LEVEL=warn
+    entrypoint: *besu_command
+    volumes:
+      - *random
+      - *urandom
+      - *config
+      - besu-1:/data
+    depends_on:
+      - genesis
+
+  besu-2:
+    image: *besu-image
+    environment:
+      - *besu_java_args
+      - *besu_log
+      - *besu_peer_port
+      - LOG_LEVEL=warn
+    entrypoint: *besu_command
+    volumes:
+      - *random
+      - *urandom
+      - *config
+      - besu-2:/data
+    depends_on:
+      - genesis
+
+  besu-3:
+    image: *besu-image
+    environment:
+      - *besu_java_args
+      - *besu_log
+      - *besu_peer_port
+      - LOG_LEVEL=warn
+    entrypoint: *besu_command
+    volumes:
+      - *random
+      - *urandom
+      - *config
+      - besu-3:/data
+    depends_on:
+      - genesis
+
+  rpc-0:
+    image: &rpc-image rpc:$ISOLATION_ID
+    ports:
+      - "9000:9000"
+    environment:
+      - LOG_LEVEL=info
+      - INDEX_DB=rpc0
+      - PARTICIPANT=besu-0
+    entrypoint: &rpc_command
+      - bash
+      - -c
+      - |
+        while [ ! -r /config/genesis.done ]; do
+          sleep 1
+        done
+        sleep 30
+        /opt/daml-on-besu/rpc/entrypoint.sh \
+          --json-rpc-url http://$$PARTICIPANT:8545 \
+          --participant port=9000,address=0.0.0.0,participant-id=$$PARTICIPANT,server-jdbc-url=jdbc:postgresql://postgres/$$INDEX_DB?user=postgres \
+          --logging $$LOG_LEVEL \
+          --private-key-file /data/key \
+          `ls /opt/daml-on-besu/dar/*.dar`
+    depends_on:
+      - besu-0
+    volumes:
+      - &test-dars ../test-dars:/opt/daml-on-besu/dar/
+      - besu-0:/data
+      - *config
+      - *random
+      - *urandom
+
+  rpc-1:
+    image: *rpc-image
+    environment:
+      - LOG_LEVEL=info
+      - INDEX_DB=rpc1
+      - PARTICIPANT=besu-1
+    entrypoint: *rpc_command
+    depends_on:
+      - besu-1
+    volumes:
+      - *test-dars
+      - besu-1:/data
+      - *config
+      - *random
+      - *urandom
+
+  genesis:
+    image: *besu-image
+    environment:
+      - *besu_peer_port
+    entrypoint:
+      - bash
+      - -c
+      - |
+        if [ ! -r /config/genesis.done ]; then
+          rm -rf /data/keys/*
+          mkdir /networkFiles
+          cd /genesis
+          /opt/besu/bin/besu operator generate-blockchain-config --config-file=/genesis/ibftConfigFile.json \
+            --to=/networkFiles --private-key-file-name=key
+          cd /networkFiles/keys
+
+          count=0
+          for d in $$(find /networkFiles/keys/ -maxdepth 1 -type d|grep 0x); do
+            name=besu-$$count
+            mv $$d/key /data/$$name/
+            mv $$d/key.pub /data/$$name/
+            mkdir -p /data/keys/$$name
+            cp /data/$$name/key /data/keys/$$name/
+            cp /data/$$name/key.pub /data/keys/$$name/
+            cp /networkFiles/genesis.json /data/$$name/
+            count=$$(( $$count + 1 ))
+          done
+
+          echo [ > /tmp/static-nodes.json
+          count=0
+          for d in $$(find /networkFiles/keys/ -maxdepth 1 -type d|grep 0x); do
+            name=besu-$$count
+            key=$$(cat /data/$$name/key.pub | sed -e 's/0x//')
+            ip=$$(getent hosts $$name | head -1 |awk '{print $$1}')
+            while [ -z $$ip ]; do
+              sleep 1
+              ip=$$(getent hosts $$name | head -1 |awk '{print $$1}')
+            done
+            enodeurl=enode://$$key@$$ip:$$BESU_ENODE_PORT
+            echo ENODE: $$enodeurl
+            if [ $$count -gt 0 ]; then
+              printf ',\n' >> /tmp/static-nodes.json
+            fi
+            printf \"$$enodeurl\" >> /tmp/static-nodes.json
+            count=$$(( $$count + 1 ))
+          done
+          echo ] >> /tmp/static-nodes.json
+          count=0
+          for d in $$(find /networkFiles/keys/ -maxdepth 1 -type d|grep 0x); do
+            name=besu-$$count
+            cp /tmp/static-nodes.json /data/$$name/
+            count=$$(( $$count + 1 ))
+          done
+          touch /config/genesis.done
+        fi
+        tail -f /dev/null
+    volumes:
+      - *random
+      - *urandom
+      - *config
+      - besu-0:/data/besu-0
+      - besu-1:/data/besu-1
+      - besu-2:/data/besu-2
+      - besu-3:/data/besu-3
+      - ../genesis:/genesis
+
+  # Truly problematic tests are
+  #  CommandDeduplicationIT:CDSimpleDeduplicationCommandClient
+  #  CommandSubmissionCompletionIT:CSCHandleMultiPartySubscriptions
+
+  ledger-api-testtool:
+    image: ledger-api-testtool:$ISOLATION_ID
+    environment:
+      - TEST_SPEC_OVERRIDE
+      - TEST_SPEC
+    entrypoint:
+      - bash
+      - -xc
+      - |
+        while [ ! -r /config/genesis.done ]; do
+          sleep 1;
+        done
+        sleep 300
+        if [ -n "$TEST_SPEC_OVERRIDE" ]; then
+          export TEST_SPEC=$$TEST_SPEC_OVERRIDE
+        fi
+        java -jar ledger-api-test-tool.jar \
+        $$TEST_SPEC \
+        --timeout-scale-factor 10 \
+        --concurrent-test-runs=2 \
+        rpc-0:9000 rpc-1:9000
+    depends_on:
+      - rpc-0
+    volumes:
+      - *config
+      - *random
+      - *urandom
+
+volumes:
+  config:
+  besu-0:
+  besu-1:
+  besu-2:
+  besu-3:
+  pgdata:

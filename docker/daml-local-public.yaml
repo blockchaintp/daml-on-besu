@@ -1,0 +1,94 @@
+---
+# Copyright 2020 Blockchain Technology Partners
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: "2.1"
+
+services:
+  postgres:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data/pgdata
+
+  # Bootnode, i.e. the initial node in the network
+  besu-0:
+    image: besu:$ISOLATION_ID
+    ports:
+      - "8545:8545"
+    environment:
+      # default jvm arguments taken from besu start script
+      - &besu_java_args JAVA_ARGS=-Dvertx.disableFileCPResolving=true -Dlog4j.shutdownHookEnabled=false --add-opens java.base/sun.security.provider=ALL-UNNAMED
+      - &besu_log LOG4J_CONFIGURATION_FILE=/opt/daml-on-besu/besu/log4j2.xml
+      - LOG_LEVEL=warn
+    entrypoint:
+      - bash
+      - -c
+      - |
+        /opt/daml-on-besu/besu/entrypoint.sh \
+          --data-path=/data \
+          --genesis-file=/genesis/testGenesis.json \
+          --host-whitelist=* \
+          --key-value-storage=rocksdb \
+          --logging=$$LOG_LEVEL \
+          --min-gas-price=0 \
+          --miner-coinbase=fe3b557e8fb62b89f4916b721be55ceb828dbd73 \
+          --rpc-http-api=ETH,NET,WEB3,TXPOOL,MINER,ADMIN,IBFT \
+          --miner-enabled \
+          --rpc-http-cors-origins=* \
+          --rpc-http-enabled \
+          --rpc-http-host=0.0.0.0
+    volumes:
+      - &besu_0 besu-0:/data
+      - &random /dev/urandom:/dev/random
+      - &urandom /dev/urandom:/dev/urandom
+      - ../genesis:/genesis
+
+  rpc-0:
+    image: rpc:$ISOLATION_ID
+    ports:
+      - "9000:9000"
+    environment:
+      - LOG_LEVEL=info
+      - INDEX_DB=postgres
+      - PARTICIPANT=besu-0
+    entrypoint:
+      - bash
+      - -c
+      - |
+        sleep 30
+        while [ ! -r /data/key ]; do
+          sleep 1
+        done
+        /opt/daml-on-besu/rpc/entrypoint.sh \
+          --json-rpc-url http://$$PARTICIPANT:8545 \
+          --participant port=9000,address=0.0.0.0,participant-id=$$PARTICIPANT,server-jdbc-url=jdbc:postgresql://postgres/$$INDEX_DB?user=postgres \
+          --logging $$LOG_LEVEL \
+          --private-key-file /data/key \
+          `ls /opt/daml-on-besu/dar/*.dar`
+    depends_on:
+      - besu-0
+    volumes:
+      - ../test-dars:/opt/daml-on-besu/dar/
+      - *besu_0
+      - *random
+      - *urandom
+
+volumes:
+  besu-0:
+  pgdata:

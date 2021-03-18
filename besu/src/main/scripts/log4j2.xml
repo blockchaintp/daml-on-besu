@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Configuration status="warn">
+  <Properties>
+    <Property name="appName" value="besu" />
+    <Property name="logPath" value="/var/log/${appName}" />
+    <Property name="logPattern" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] %t | %msg%throwable | %l%n" />
+  </Properties>
+  <Appenders>
+    <Console name="console" target="SYSTEM_OUT">
+      <PatternLayout pattern="${logPattern}" />
+    </Console>
+    <Console name="console" target="SYSTEM_ERR">
+      <PatternLayout pattern="${logPattern}" />
+    </Console>
+    <RollingFile name="log" fileName="${logPath}/${appName}.log" filePattern="${logPath}/${appName}-%d{yyyy-MM-dd}.log" append="true">
+      <PatternLayout pattern="${logPattern}" />
+      <Policies>
+        <TimeBasedTriggeringPolicy interval="1" />
+      </Policies>
+      <DefaultRolloverStrategy max="5" />
+    </RollingFile>
+  </Appenders>
+  <Loggers>
+    <Logger name="org.rocksdb" level="info">
+      <AppenderRef ref="console" />
+    </Logger>
+    <Root level="info">
+      <AppenderRef ref="console" />
+    </Root>
+  </Loggers>
+</Configuration>
