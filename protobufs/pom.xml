@@ -22,7 +22,7 @@
   <parent>
     <groupId>daml-on-besu</groupId>
     <artifactId>daml-on-besu</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>${revision}</version>
   </parent>
 
   <artifactId>daml-protobufs</artifactId>

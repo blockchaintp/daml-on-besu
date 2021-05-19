@@ -18,7 +18,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>daml-on-besu</groupId>
   <artifactId>daml-on-besu</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>${revision}</version>
   <name>DAML on Besu</name>
   <packaging>pom</packaging>
   <description>Implementation of DAML Ledger API with a Besu backend</description>
@@ -114,6 +114,19 @@
       <properties></properties>
     </profile>
   </profiles>
+
+  <distributionManagement>
+    <repository>
+      <uniqueVersion>false</uniqueVersion>
+      <id>releases</id>
+      <layout>default</layout>
+    </repository>
+    <snapshotRepository>
+      <uniqueVersion>true</uniqueVersion>
+      <id>snapshots</id>
+      <layout>default</layout>
+    </snapshotRepository>
+  </distributionManagement>
 
   <modules>
     <module>protobufs</module>
