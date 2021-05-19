@@ -50,20 +50,12 @@ pipeline {
       }
     }
 
-    stage('Toolchain Build') {
-      steps {
-        sh 'docker-compose -f docker/docker-compose-build.yaml build --parallel'
-        sh 'mkdir -p test-dars && docker run --rm -v `pwd`/test-dars:/out ledger-api-testtool:${ISOLATION_ID} bash -c "java -jar ledger-api-test-tool.jar -x && cp *.dar /out"'
-      }
-    }
-
     stage('Build') {
       steps {
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-besu toolchain:${ISOLATION_ID} mvn -B clean compile'
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml toolchain:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-          sh 'docker run --rm -v `pwd`:/project/daml-on-besu toolchain:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
-          sh 'mkdir -p test-dars && docker run --rm -v `pwd`/test-dars:/out ledger-api-testtool:${ISOLATION_ID} bash -c "java -jar ledger-api-test-tool.jar -x && cp *.dar /out"'
+          sh '''
+            make clean build
+          '''
         }
       }
     }
@@ -71,36 +63,61 @@ pipeline {
     stage('Package') {
       steps {
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-besu toolchain:${ISOLATION_ID} mvn -B package verify'
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml toolchain:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-          sh 'docker run --rm -v `pwd`:/project/daml-on-besu toolchain:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+          sh '''
+            make package
+          '''
         }
         sh 'docker-compose -f docker-compose.yaml build'
       }
     }
 
-    stage('Public IBFT Integration Tests') {
+    stage('Test') {
       steps {
-        script {
-          sh 'docker-compose -p ${PROJECT_ID} -f docker/daml-test-public-ibft.yaml down -v || true'
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
           sh '''
-            export TEST_SPEC="--exclude ConfigManagementServiceIT:CMSetAndGetTimeModel"
-            docker-compose -p ${PROJECT_ID} -f docker/daml-test-public-ibft.yaml up --exit-code-from ledger-api-testtool || true
+            make test
           '''
-          sh '''
-            docker logs ${PROJECT_ID}_ledger-api-testtool_1 > results.txt 2>&1
-            ./run_tests ./results.txt PUBLIC > daml-test-public-ibft.results
-          '''
-          sh 'docker-compose -p ${PROJECT_ID} -f docker/daml-test-public-ibft.yaml down -v || true'
-          step([$class: "TapPublisher", testResults: "daml-test-public-ibft.results"])
+          step([$class: "TapPublisher", testResults: "build/daml-test-public-ibft.results"])
         }
+      }
+    }
+
+    stage("Analyze") {
+      when {
+        expression { env.BRANCH_NAME == "main" }
+      }
+      steps {
+        withSonarQubeEnv('sonarqube') {
+          sh '''
+            make analyze
+          '''
+        }
+      }
+    }
+
+    stage('Create Archives') {
+      steps {
+        sh '''
+          make archive
+        '''
+      }
+    }
+
+    stage("Publish") {
+      when {
+        expression { env.BRANCH_NAME == "main" }
+      }
+      steps {
+        sh '''
+          make publish
+        '''
       }
     }
   }
 
   post {
-    always{
-      sh 'docker-compose -p ${PROJECT_ID} -f docker/daml-test-public-ibft.yaml down -v || true'
+    success {
+      archiveArtifacts 'build/*.tgz, build/*.zip'
     }
     aborted {
       error "Aborted, exiting now"
@@ -109,22 +126,4 @@ pipeline {
       error "Failed, exiting now"
     }
   }
-}
-
-def runCommand(script) {
-    echo "[runCommand:script] ${script}"
-
-    def stdoutFile = "rc.${BUILD_NUMBER}.out"
-    def stderrFile = "rc.${BUILD_NUMBER}.err"
-    script = script + " > " + stdoutFile +" 2> " + stderrFile
-
-    def res = [:]
-    res["exitCode"] = sh(returnStatus: true, script: script)
-    res["stdout"] = sh(returnStdout: true, script: "cat " + stdoutFile)
-    res["stderr"] = sh(retStdout: true, script: "cat "+stderrFile)
-    sh(returnStatus: true, script: "rm -f " + stdoutFile)
-    sh(returnStatus: true, script: "rm -f " + stderrFile)
-
-    echo "[runCommand:response] ${res["exitCode"]}"
-    return res
 }
