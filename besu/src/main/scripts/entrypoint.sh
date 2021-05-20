@@ -18,6 +18,6 @@
 daml_on_besu_jar=$(ls -t /opt/daml-on-besu/besu/besu-*.jar | head -n 1) && [ -z "$daml_on_besu_jar" ] && exit 1
 daml_on_besu_lib=/opt/daml-on-besu/besu/lib/*
 besu_lib=/opt/besu/lib/*
-classpath=$daml_on_besu_jar:$daml_on_besu_lib:$besu_lib
+classpath=/opt/daml-on-besu/besu/lib/common-0.0.1-SNAPSHOT.jar:$daml_on_besu_jar:$daml_on_besu_lib:$besu_lib
 
 java ${JAVA_ARGS} -classpath $classpath org.hyperledger.besu.Besu $@

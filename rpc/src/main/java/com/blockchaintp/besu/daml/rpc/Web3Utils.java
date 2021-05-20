@@ -2,9 +2,11 @@ package com.blockchaintp.besu.daml.rpc;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +28,15 @@ import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.gas.StaticGasProvider;
 
 public class Web3Utils {
+
   private static final Logger LOG = LoggerFactory.getLogger(Web3Utils.class);
+
+  private static final int DEFAULT_WAIT_BEFORE_RETRY_SECONDS = 30;
+  private static final int DEFAULT_MAX_RETRIES = -1;
+
+  private int maxRetries;
+
+  private int retryWaitTimeSeconds;
 
   private Web3j web3;
 
@@ -35,6 +45,24 @@ public class Web3Utils {
   public Web3Utils(final Web3j web3) {
     setWeb3(web3);
     this.gasProvider = new StaticGasProvider(BigInteger.ZERO, BigInteger.valueOf(3000000));
+    this.setMaxRetries(DEFAULT_MAX_RETRIES);
+    this.setRetryWaitTimeSeconds(DEFAULT_WAIT_BEFORE_RETRY_SECONDS);
+  }
+
+  private int getMaxRetries() {
+    return maxRetries;
+  }
+
+  private void setMaxRetries(int maxRetries) {
+    this.maxRetries = maxRetries;
+  }
+
+  private int getRetryWaitTimeSeconds() {
+    return retryWaitTimeSeconds;
+  }
+
+  private void setRetryWaitTimeSeconds(int retryWaitTimeSeconds) {
+    this.retryWaitTimeSeconds = retryWaitTimeSeconds;
   }
 
   protected Web3Utils() {
@@ -67,10 +95,27 @@ public class Web3Utils {
 
   public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to, final byte[] dataBytes) {
     final String data = Utils.bytesToHex(dataBytes);
-    return sendEncodedString(credentials, to, data);
+    int tries = 0;
+    RecoverableException lastException = null;
+    while (getMaxRetries() < 0 || tries < getMaxRetries()) {
+      try {
+        return sendEncodedString(credentials, to, data);
+      } catch (RecoverableException e) {
+        lastException = e;
+        tries++;
+        LOG.warn("Received recoverable exception, sleeping for {}s before retry attempt={}}", getRetryWaitTimeSeconds(), tries);
+        try {
+          TimeUnit.SECONDS.sleep(getRetryWaitTimeSeconds());
+        } catch (InterruptedException e1) {
+          LOG.warn("Interrupted while asleep waiting to retry", e1);
+          throw new RuntimeException(e1);
+        }
+      }
+    }
+    throw new RuntimeException(lastException.getCause());
   }
 
-  public Request<?, EthSendTransaction> sendEncodedString(Credentials credentials, String to, String data) {
+  public Request<?, EthSendTransaction> sendEncodedString(Credentials credentials, String to, String data) throws RecoverableException {
     LOG.debug("Creating transaction");
     final BigInteger gasLimit = getGasLimit(data.getBytes());
     final BigInteger nonce = getNonce(credentials);
@@ -89,13 +134,20 @@ public class Web3Utils {
     return ethSendTx;
   }
 
-  protected BigInteger getNonce(final Credentials credentials) {
-    EthGetTransactionCount ethGetTransactionCount;
+  protected BigInteger getNonce(final Credentials credentials) throws RecoverableException {
+    EthGetTransactionCount ethGetTransactionCount = null;
     try {
       ethGetTransactionCount = web3.ethGetTransactionCount(credentials.getAddress(), DefaultBlockParameterName.PENDING)
           .sendAsync().get();
-    } catch (InterruptedException | ExecutionException e) {
-      LOG.error("Severe error getting tranaction nonce", e);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof SocketTimeoutException) {
+        throw new RecoverableException("Socket timeout received while fetching nonce",e);
+      } else {
+        LOG.error("Severe error getting transaction nonce", e);
+        throw new RuntimeException(e);
+      }
+    } catch (InterruptedException e) {
+      LOG.error("Interrupted while getting nonce", e);
       throw new RuntimeException(e);
     }
     final BigInteger nonce = ethGetTransactionCount.getTransactionCount();
@@ -123,4 +175,11 @@ public class Web3Utils {
     return this.gasProvider.getGasPrice();
   }
 
+  private class RecoverableException extends Exception {
+
+    public RecoverableException(String message, ExecutionException e) {
+      super(message, e);
+    }
+
+  }
 }

@@ -45,6 +45,7 @@ import org.hyperledger.besu.ethereum.core.LogTopic;
 import org.hyperledger.besu.ethereum.core.MutableAccount;
 import org.hyperledger.besu.ethereum.core.WorldUpdater;
 import org.hyperledger.besu.ethereum.rlp.RLP;
+import org.hyperledger.besu.ethereum.rlp.RLPException;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
 import org.web3j.abi.EventEncoder;
 import org.web3j.abi.datatypes.Event;
@@ -114,12 +115,15 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
     int slices = 1;
     Bytes rawRlp = Bytes.EMPTY;
     final List<Bytes> dataSoFar = new ArrayList<>();
+    final List<Bytes> unaltered = new ArrayList<>();
     String deadBeef = data.toHexString();
     if (deadBeef.contains("00dead")) {
       dataSoFar.add(fromDeadBeef(data));
+      unaltered.add(data.toBytes());
     } else {
       if (!data.isZero()) {
         dataSoFar.add(data.toMinimalBytes());
+        unaltered.add(data.toBytes());
       } else {
         return null;
       }
@@ -138,15 +142,27 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
       deadBeef = data.toHexString();
       if (deadBeef.contains("00dead")) {
         dataSoFar.add(fromDeadBeef(data));
+        unaltered.add(data.toBytes());
       } else {
         dataSoFar.add(data.toMinimalBytes());
+        unaltered.add(data.toBytes());
       }
     }
     rawRlp = Bytes.concatenate(dataSoFar.toArray(new Bytes[] {}));
     LOG.debug("Fetched from rootKey={} slices={} size={}", key.toHexString(), slices, rawRlp.size());
     if (rawRlp.size() != 0) {
-      final Bytes entry = RLP.decodeOne(rawRlp);
-      return ByteBuffer.wrap(entry.toArray());
+      try {
+        final Bytes entry = RLP.decodeOne(rawRlp);
+        return ByteBuffer.wrap(entry.toArray());
+      } catch (RLPException e) {
+        LOG.error("RLP Serialization eror encountered, original input data to follow");
+        int index=0;
+        for (Bytes b : unaltered ) {
+          LOG.error("slot={} data=", index, b.toHexString());
+          index++;
+        }
+        throw e;
+      }
     } else {
       return null;
     }

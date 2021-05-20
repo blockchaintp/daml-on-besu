@@ -25,7 +25,7 @@
     <version>${revision}</version>
   </parent>
 
-  <artifactId>rpc</artifactId>
+  <artifactId>common</artifactId>
   <name>${project.groupId}:${project.artifactId}</name>
   <description>Implementation of DAML Ledger API Server with a Besu backend</description>
 
@@ -34,11 +34,6 @@
     <dependency>
       <groupId>daml-on-besu</groupId>
       <artifactId>daml-protobufs</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>daml-on-besu</groupId>
-      <artifactId>common</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
@@ -137,23 +132,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifest>
-              <addClasspath>true</addClasspath>
-              <classpathPrefix>lib/</classpathPrefix>
-              <mainClass>com.blockchaintp.besu.daml.rpc.Main</mainClass>
-            </manifest>
-          </archive>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
       </plugin>
     </plugins>
   </build>

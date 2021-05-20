@@ -33,6 +33,11 @@
       <artifactId>daml-protobufs</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
+    <dependency>
+      <groupId>daml-on-besu</groupId>
+      <artifactId>common</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
   <!-- https://mvnrepository.com/artifact/org.web3j/eea -->
     <dependency>
       <groupId>org.web3j</groupId>
