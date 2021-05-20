@@ -74,15 +74,15 @@ public final class DamlPublicPrecompiledContract extends DamlPrecompiledContract
     try {
       final Either<ValidationFailed, DamlLogEvent> either = validateAndCommitCS.toCompletableFuture().get();
       if (either.isLeft()) {
-        final ValidationFailed validationFailed = either.left().get();
+        final var validationFailed = either.left().get();
         throw new InvalidTransactionException(validationFailed.toString());
       } else {
-        final DamlLogEvent logEvent = either.right().get();
-        LOG.debug("Processed transaction into log event {}",
-            logEvent.getLogEntryId().toStringUtf8());
-        return;
+        LOG.debug("Processed transaction into log event cid={}",correlationId);
       }
-    } catch (InterruptedException | ExecutionException e) {
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted while handling transaction",e);
+      Thread.currentThread().interrupt();
+    } catch (ExecutionException e) {
       throw new InternalError(e.getMessage());
     }
   }
