@@ -88,18 +88,22 @@ pipeline {
       }
       steps {
         withSonarQubeEnv('sonarqube') {
-          sh '''
-            make clean analyze
-          '''
+          configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+            sh '''
+              make clean analyze
+            '''
+          }
         }
       }
     }
 
     stage('Create Archives') {
       steps {
-        sh '''
-          make archive
-        '''
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+          sh '''
+            make archive
+          '''
+        }
       }
     }
 
@@ -108,9 +112,11 @@ pipeline {
         expression { env.BRANCH_NAME == "main" }
       }
       steps {
-        sh '''
-          make clean publish
-        '''
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+          sh '''
+            make clean publish
+          '''
+        }
       }
     }
   }
