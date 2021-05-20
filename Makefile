@@ -30,6 +30,7 @@ MAVEN_REVISION != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
 TOOLCHAIN := docker run --rm -v $(HOME)/.m2/repository:/root/.m2/repository \
 		-v $(MAVEN_SETTINGS):/root/.m2/settings.xml -v `pwd`:/project/daml-on-besu \
 		toolchain:$(ISOLATION_ID)
+DEPLOY_MVN := $(TOOLCHAIN) mvn -Drevision=$(MAVEN_REVISION)
 DOCKER_MVN := $(TOOLCHAIN) mvn -Drevision=$(MAVEN_REVISION) -B
 
 SONAR_HOST_URL ?= https://sonarqube.dev.catenasys.com
@@ -128,5 +129,6 @@ archive: dirs
 	git archive HEAD --format=tgz -9 --output=build/$(REPO)-$(VERSION).tgz
 
 .PHONY: publish
-publish: package
-	$(DOCKER_MVN) deploy
+publish:
+	$(DEPLOY_MVN) -Drevision=0.0.0 versions:set -DnewVersion=$(MAVEN_REVISION)
+	$(DOCKER_MVN) clean deploy
