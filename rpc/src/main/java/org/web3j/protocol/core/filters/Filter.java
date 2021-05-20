@@ -134,9 +134,11 @@ public abstract class Filter<T> {
             if ( e.getMessage().contains("Filter not found")) {
                 reinstallFilter();
                 return;
+            } else {
+              throw new FilterException("Error sending request", e);
             }
         } catch (IOException e) {
-            throwException(e);
+            throw new FilterException("Error sending request", e);
         }
         if (ethLog.hasError()) {
             Error error = ethLog.getError();
