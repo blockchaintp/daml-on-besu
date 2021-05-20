@@ -67,7 +67,6 @@ pipeline {
             make package
           '''
         }
-        sh 'docker-compose -f docker-compose.yaml build'
       }
     }
 
