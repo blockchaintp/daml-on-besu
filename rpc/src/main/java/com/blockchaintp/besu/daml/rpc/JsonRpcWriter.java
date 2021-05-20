@@ -62,7 +62,9 @@ public class JsonRpcWriter implements LedgerWriter {
       LOG.debug("Submitting request");
       submitter.put(operation);
     } catch (final InterruptedException e) {
-      throw new RuntimeException(e);
+      LOG.warn("JsonRpcWriter interrupted while submitting a request");
+      Thread.currentThread().interrupt();
+      return Future.successful(new SubmissionResult.InternalError("JsonRpcWriter interrupted while submitting a request"));
     }
     LOG.debug("Acknowledging Submission");
     return Future.successful(SubmissionResult.Acknowledged$.MODULE$);

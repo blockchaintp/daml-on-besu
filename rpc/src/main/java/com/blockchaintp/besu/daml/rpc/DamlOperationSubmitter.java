@@ -168,7 +168,10 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
             }
           }
         }
-      } catch (final InterruptedException | IOException | TransactionException e) {
+      } catch (final InterruptedException e) {
+        LOG.warn("Operation submitter thread interrupted", e);
+        Thread.currentThread().interrupt();
+      } catch (IOException | TransactionException e) {
         throw new RuntimeException(e);
       }
     }

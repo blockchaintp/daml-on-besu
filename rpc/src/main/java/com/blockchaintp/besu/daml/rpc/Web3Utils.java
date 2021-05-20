@@ -108,7 +108,7 @@ public class Web3Utils {
           TimeUnit.SECONDS.sleep(getRetryWaitTimeSeconds());
         } catch (InterruptedException e1) {
           LOG.warn("Interrupted while asleep waiting to retry", e1);
-          throw new RuntimeException(e1);
+          Thread.currentThread().interrupt();
         }
       }
     }
@@ -147,8 +147,8 @@ public class Web3Utils {
         throw new RuntimeException(e);
       }
     } catch (InterruptedException e) {
-      LOG.error("Interrupted while getting nonce", e);
-      throw new RuntimeException(e);
+      Thread.currentThread().interrupt();
+      throw new RecoverableException("Interrupted while getting nonce", e);
     }
     final BigInteger nonce = ethGetTransactionCount.getTransactionCount();
     final long val = nonce.longValue();
@@ -177,8 +177,8 @@ public class Web3Utils {
 
   private class RecoverableException extends Exception {
 
-    public RecoverableException(String message, ExecutionException e) {
-      super(message, e);
+    public RecoverableException(String message, Throwable t) {
+      super(message, t);
     }
 
   }
