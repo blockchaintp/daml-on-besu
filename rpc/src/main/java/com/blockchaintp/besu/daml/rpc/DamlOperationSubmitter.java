@@ -3,8 +3,12 @@ package com.blockchaintp.besu.daml.rpc;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
@@ -19,8 +23,13 @@ import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.Request;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
+import org.web3j.protocol.exceptions.ClientConnectionException;
 import org.web3j.protocol.exceptions.TransactionException;
 import org.web3j.tx.response.PollingTransactionReceiptProcessor;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * DamlOperation submitter takes DamlOperations off of a queue and assembles
@@ -35,6 +44,8 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
   private static final int MAX_OPS_PER_BATCH = 100;
 
   private static final long DEFAULT_TIME_UPDATE_MAX_INTERVAL_SECONDS = 20;
+
+  private static final Integer NONCE_TOO_LOW = -32001;
 
   private final Duration timeUpdateInterval;
 
@@ -78,10 +89,11 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
   public void run() {
     Instant lastInstantUpdate = null;
     long batchCounter = 0;
-    CompletableFuture<EthSendTransaction> outstandingItem = null;
+    Queue<CompletableFuture<EthSendTransaction>> outstandingItem = new LinkedList<>();
+    Queue<DamlOperationBatch> submittedBatches = new LinkedList<>();
     while (keepRunning) {
       try {
-        if (outstandingItem == null) {
+        if (outstandingItem.size() == 0) {
           long startPoll = System.currentTimeMillis();
           DamlOperation op = submitQueue.poll(MAX_WAIT_MS, TimeUnit.MILLISECONDS);
           long timeSpent = System.currentTimeMillis() - startPoll;
@@ -126,22 +138,54 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
             final DamlOperationBatch batch = builder.build();
             LOG.info("Sending batch {} opCount={}", batchCounter, opCounter);
             final Request<?, EthSendTransaction> txRequest = createTxRequest(web3, batch);
-            outstandingItem = txRequest.sendAsync();
+            submittedBatches.add(batch);
+            outstandingItem.add(txRequest.sendAsync());
+            batchCounter++;
           }
         } else {
-          final EthSendTransaction txResp = outstandingItem.join();
-          final String txHash = txResp.getTransactionHash();
-          if (this.pessimisticNonce) {
-            this.txReceiptProcessor.waitForTransactionReceipt(txHash);
-            LOG.info("Sending item complete {}", batchCounter);
+          final DamlOperationBatch txBatch = submittedBatches.remove();
+          final CompletableFuture<EthSendTransaction> txRespCf = outstandingItem.remove();
+
+          try  {
+            final EthSendTransaction txResp = txRespCf.join();
+            final String txHash = txResp.getTransactionHash();
+            if (this.pessimisticNonce) {
+              this.txReceiptProcessor.waitForTransactionReceipt(txHash);
+              LOG.info("Sending item complete {}", batchCounter);
+            }
+          } catch ( CompletionException ce ) {
+            if (ce.getCause() instanceof ClientConnectionException) {
+              Integer errorCode = extractError(ce);
+              if ( NONCE_TOO_LOW.equals(errorCode) ) {
+                LOG.warn("Received nonce too low exception, resubmitted batch {}", batchCounter);
+                final Request<?, EthSendTransaction> txRequest = createTxRequest(web3, txBatch);
+                submittedBatches.add(txBatch);
+                outstandingItem.add(txRequest.sendAsync());
+                batchCounter++;
+              } else {
+                LOG.warn(String.format("Unhandled errorCode = %s at batch %s", errorCode, batchCounter), ce.getCause());
+              }
+            }
           }
-          batchCounter++;
-          outstandingItem = null;
         }
       } catch (final InterruptedException | IOException | TransactionException e) {
         throw new RuntimeException(e);
       }
     }
+  }
+
+  private Integer extractError(CompletionException ce) throws JsonProcessingException, JsonMappingException {
+    ClientConnectionException cce = (ClientConnectionException) ce.getCause();
+    String message = cce.getMessage();
+
+    String jsonPayload = message.substring(message.indexOf(';')+2);
+    HashMap<String, Object> errorMap = new ObjectMapper().readValue(jsonPayload, HashMap.class);
+    if (errorMap.containsKey("error")) {
+      HashMap<String,Object> error = (HashMap<String, Object>) errorMap.get("error");
+      Integer errorCode = Integer.parseInt(error.getOrDefault("code","0").toString());
+      return errorCode;
+    }
+    return 0;
   }
 
   private DamlOperation sendTimeUpdate(final Instant now) {

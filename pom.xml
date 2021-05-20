@@ -130,6 +130,7 @@
 
   <modules>
     <module>protobufs</module>
+    <module>common</module>
     <module>rpc</module>
     <module>besu</module>
   </modules>
