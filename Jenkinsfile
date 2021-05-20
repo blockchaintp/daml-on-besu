@@ -104,6 +104,7 @@ pipeline {
             make archive
           '''
         }
+        archiveArtifacts 'build/*.tgz, build/*.zip'
       }
     }
 
@@ -122,9 +123,6 @@ pipeline {
   }
 
   post {
-    success {
-      archiveArtifacts 'build/*.tgz, build/*.zip'
-    }
     aborted {
       error "Aborted, exiting now"
     }
