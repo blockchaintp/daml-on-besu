@@ -126,6 +126,6 @@ archive: dirs
 	git archive HEAD --format=tgz -9 --output=build/$(REPO)-$(VERSION).tgz
 
 .PHONY: publish
-publish:
+publish: build_toolchain
 	$(DOCKER_MVN) -Drevision=0.0.0 versions:set -DnewVersion=$(MAVEN_REVISION)
 	$(DOCKER_MVN) clean deploy
