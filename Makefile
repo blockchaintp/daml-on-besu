@@ -34,7 +34,7 @@ DEPLOY_MVN := $(TOOLCHAIN) mvn -Drevision=$(MAVEN_REVISION)
 DOCKER_MVN := $(TOOLCHAIN) mvn -Drevision=$(MAVEN_REVISION) -B
 
 SONAR_HOST_URL ?= https://sonarqube.dev.catenasys.com
-SONAR_AUTH_TOKEN ?= $(SONAR_AUTH_TOKEN)
+SONAR_AUTH_TOKEN ?=
 PMD_IMAGE ?= blockchaintp/pmd:latest
 
 export TEST_SPEC ?= --exclude ConfigManagementServiceIT:CMSetAndGetTimeModel
@@ -105,12 +105,9 @@ clean_test_public_ibft:
 analyze: analyze_sonar
 
 .PHONY: analyze_sonar
-analyze_sonar:
+analyze_sonar: package
 	[ -z "$(SONAR_AUTH_TOKEN)" ] || \
-	docker run \
-		--rm \
-		-v $$(pwd):/usr/src \
-		sonarsource/sonar-scanner-cli \
+	$(DOCKER_MVN) sonar:sonar \
 			-Dsonar.projectKey=$(ORGANIZATION)_$(REPO):$(SAFE_BRANCH_NAME) \
 			-Dsonar.projectName=$(REPO) \
 			-Dsonar.projectVersion=$(VERSION) \
@@ -130,5 +127,5 @@ archive: dirs
 
 .PHONY: publish
 publish:
-	$(DEPLOY_MVN) -Drevision=0.0.0 versions:set -DnewVersion=$(MAVEN_REVISION)
+	$(DOCKER_MVN) -Drevision=0.0.0 versions:set -DnewVersion=$(MAVEN_REVISION)
 	$(DOCKER_MVN) clean deploy

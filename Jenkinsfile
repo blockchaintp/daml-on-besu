@@ -89,7 +89,7 @@ pipeline {
       steps {
         withSonarQubeEnv('sonarqube') {
           sh '''
-            make analyze
+            make clean analyze
           '''
         }
       }
@@ -109,7 +109,7 @@ pipeline {
       }
       steps {
         sh '''
-          make publish
+          make clean publish
         '''
       }
     }
