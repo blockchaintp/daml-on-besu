@@ -33,6 +33,7 @@ public class Web3jFactory {
   }
 
   public static Web3jService web3jService(final String jsonRpcUrl) {
+    LOG.info("Connecting to {}",jsonRpcUrl);
     try {
       Web3jService service;
       if (jsonRpcUrl.startsWith("ws://") || jsonRpcUrl.startsWith("wss://")) {

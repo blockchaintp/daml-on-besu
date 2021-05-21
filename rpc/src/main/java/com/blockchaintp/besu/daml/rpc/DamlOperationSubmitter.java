@@ -100,8 +100,8 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
           long timeSpent = System.currentTimeMillis() - startPoll;
           long nextPoll = Math.max(MAX_WAIT_MS - timeSpent, 1L);
           final DamlOperationBatch.Builder builder = DamlOperationBatch.newBuilder();
-          boolean opsAdded = false;
-          int opCounter = 0;
+          var opsAdded = false;
+          var opCounter = 0;
           while (op != null ) {
             builder.addOperations(op);
             opCounter++;
@@ -125,7 +125,7 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
             lastInstantUpdate = now;
             opsAdded = true;
           } else if (lastInstantUpdate != null) {
-            Duration res = Duration.between(lastInstantUpdate, now);
+            var res = Duration.between(lastInstantUpdate, now);
             if (res.compareTo(this.timeUpdateInterval) >= 0 ) {
               final DamlOperation tUpdate = sendTimeUpdate(now);
               builder.addOperations(tUpdate);
@@ -187,6 +187,7 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
     return batchCounter;
   }
 
+  @SuppressWarnings("all")
   private Integer extractError(CompletionException ce) throws JsonProcessingException, JsonMappingException {
     ClientConnectionException cce = (ClientConnectionException) ce.getCause();
     String message = cce.getMessage();
@@ -195,8 +196,7 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
     HashMap<String, Object> errorMap = new ObjectMapper().readValue(jsonPayload, HashMap.class);
     if (errorMap.containsKey("error")) {
       HashMap<String,Object> error = (HashMap<String, Object>) errorMap.get("error");
-      Integer errorCode = Integer.parseInt(error.getOrDefault("code","0").toString());
-      return errorCode;
+      return Integer.parseInt(error.getOrDefault("code","0").toString());
     }
     return 0;
   }
@@ -204,12 +204,11 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
   private DamlOperation sendTimeUpdate(final Instant now) {
     final com.google.protobuf.Timestamp nowMillis = Timestamps.fromMillis(now.toEpochMilli());
     final TimeKeeperUpdate tkUpdate = TimeKeeperUpdate.newBuilder().setTimeUpdate(nowMillis).build();
-    final DamlOperation operation = DamlOperation.newBuilder().setSubmittingParticipant(participantId)
+    return DamlOperation.newBuilder().setSubmittingParticipant(participantId)
         .setTimeUpdate(tkUpdate).build();
-
-    return operation;
   }
 
+  @SuppressWarnings("java:S1452")
   protected Request<?, EthSendTransaction> createTxRequest(final Web3j web3, final DamlOperationBatch batch) {
     final Web3Utils utils = new Web3Utils(web3);
     return utils.sendBytes(getCredentials(), JsonRpcWriter.DAML_PUBLIC_ADDRESS, batch.toByteArray());

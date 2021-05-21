@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
+import com.blockchaintp.besu.daml.exceptions.RecoverableException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +25,6 @@ import org.web3j.protocol.core.Request;
 import org.web3j.protocol.core.methods.request.EthFilter;
 import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
-import org.web3j.protocol.core.methods.response.EthLog;
 import org.web3j.protocol.core.methods.response.EthLog.LogResult;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.gas.StaticGasProvider;
@@ -90,14 +90,20 @@ public class Web3Utils {
     if (null != event) {
       filter.addSingleTopic(EventEncoder.encode(event));
     }
-    final EthLog ethlog = web3.ethGetLogs(filter).send();
-    final List<LogResult> logs = ethlog.getLogs();
-    return logs;
+    final var ethlog = web3.ethGetLogs(filter).send();
+    return ethlog.getLogs();
   }
 
+  @SuppressWarnings({"java:S1452"})
   public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to,
       final byte[] dataBytes) {
     final String data = Utils.bytesToHex(dataBytes);
+    return sendBytes(credentials, to, data);
+
+  }
+  @SuppressWarnings({"java:S1452","java:S2583"})
+  public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to,
+      final String data) {
     int tries = 0;
     RecoverableException lastException = null;
     while (getMaxRetries() < 0 || tries < getMaxRetries()) {
@@ -117,15 +123,16 @@ public class Web3Utils {
         }
       }
     }
-    if (null == lastException) {
-      throw new DamlBesuRuntimeException(
-          String.format("Exceeded maximum retries for request %s >= %s ", tries, getMaxRetries()));
-    } else {
+    if (lastException != null) {
       throw new DamlBesuRuntimeException(String.format("Failed to transmit request after %s retries", tries),
           lastException.getCause());
+    } else {
+      throw new DamlBesuRuntimeException(
+          String.format("Exceeded maximum retries for request %s >= %s ", tries, getMaxRetries()));
     }
   }
 
+  @SuppressWarnings("java:S1452")
   public Request<?, EthSendTransaction> sendEncodedString(Credentials credentials, String to, String data)
       throws RecoverableException {
     LOG.debug("Creating transaction");
@@ -142,8 +149,7 @@ public class Web3Utils {
     final String rtxSigned = Utils.bytesToHex(rtxSignedBytes);
 
     LOG.debug("Creating request");
-    final Request<?, EthSendTransaction> ethSendTx = web3.ethSendRawTransaction(rtxSigned);
-    return ethSendTx;
+    return web3.ethSendRawTransaction(rtxSigned);
   }
 
   protected BigInteger getNonce(final Credentials credentials) throws RecoverableException {
@@ -185,13 +191,5 @@ public class Web3Utils {
 
   protected BigInteger getGasPrice() {
     return this.gasProvider.getGasPrice();
-  }
-
-  private class RecoverableException extends Exception {
-
-    public RecoverableException(String message, Throwable t) {
-      super(message, t);
-    }
-
   }
 }

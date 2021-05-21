@@ -36,10 +36,9 @@ public abstract class AbstractJsonRpcReader<T> {
 
   private final String participantId;
 
-  private final Event DAML_LOG_EVENT = new Event("daml/log-event", List.of());
+  private static final Event DAML_LOG_EVENT = new Event("daml/log-event", List.of());
 
-
-  public AbstractJsonRpcReader(final String rpcUrl, final String configuredLedgerId, final String theParticipantId) {
+  protected AbstractJsonRpcReader(final String rpcUrl, final String configuredLedgerId, final String theParticipantId) {
     this.jsonRpcUrl = rpcUrl;
     this.ledgerId = configuredLedgerId;
     this.participantId = theParticipantId;
@@ -62,9 +61,7 @@ public abstract class AbstractJsonRpcReader<T> {
     final Web3j web3 = connect();
     final DefaultBlockParameter earliestBlock = earliestBlockFromOffset(beginAfter);
     final UnicastProcessor<T> processor = UnicastProcessor.create();
-    web3.replayPastAndFutureBlocksFlowable(earliestBlock, true).subscribe(block -> {
-      handleBlock(block,processor);
-    });
+    web3.replayPastAndFutureBlocksFlowable(earliestBlock, true).subscribe(block -> handleBlock(block, processor));
     return Source.fromPublisher(processor);
   }
 
@@ -75,7 +72,7 @@ public abstract class AbstractJsonRpcReader<T> {
   private Web3j connect() {
     if (this.web3Connection == null) {
       synchronized (this) {
-        this.web3Connection=Web3jFactory.web3j(this.jsonRpcUrl);
+        this.web3Connection = Web3jFactory.web3j(this.jsonRpcUrl);
       }
     }
     return this.web3Connection;
@@ -86,7 +83,7 @@ public abstract class AbstractJsonRpcReader<T> {
     if (beginAfter.nonEmpty()) {
       final long[] offsetFields = Utils.fromOffset(beginAfter.get());
       if (offsetFields[0] >= 0) {
-        final long startAt=offsetFields[0]+1;
+        final long startAt = offsetFields[0] + 1;
         LOG.info("Begin logs at {}", startAt);
         earliestBlock = new DefaultBlockParameterNumber(startAt);
       }
@@ -100,15 +97,14 @@ public abstract class AbstractJsonRpcReader<T> {
   protected void handleBlock(final EthBlock block, UnicastProcessor<T> processor) throws IOException {
     final Web3j web3 = connect();
     Web3Utils utils = new Web3Utils(web3);
-    final List<LogResult> logs = utils.logsFromBlock(block,JsonRpcWriter.DAML_PUBLIC_ADDRESS, DAML_LOG_EVENT);
-    if (logs.size()>0) {
+    final List<LogResult> logs = utils.logsFromBlock(block, JsonRpcWriter.DAML_PUBLIC_ADDRESS, DAML_LOG_EVENT);
+    if (!logs.isEmpty()) {
       LOG.debug("Handling {} logs from block {}", logs.size(), block.getBlock().getNumber());
-      handleEthLogs(logs,processor);
+      handleEthLogs(logs, processor);
     }
   }
 
-
   @SuppressWarnings("rawtypes")
-  abstract protected void handleEthLogs(List<LogResult> logs, UnicastProcessor<T> processor);
+  protected abstract void handleEthLogs(List<LogResult> logs, UnicastProcessor<T> processor);
 
 }

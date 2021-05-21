@@ -35,6 +35,7 @@ import org.web3j.protocol.core.methods.response.EthUninstallFilter;
 import org.web3j.protocol.exceptions.ClientConnectionException;
 
 /** Class for creating managed filter requests with callbacks. */
+@SuppressWarnings("all")
 public abstract class Filter<T> {
 
     private static final Logger log = LoggerFactory.getLogger(Filter.class);

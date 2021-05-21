@@ -7,11 +7,13 @@ import com.daml.ledger.participant.state.v1.Offset;
 import com.google.protobuf.ByteString;
 
 public class Utils {
-
   private static final int OFFSET_BYTES = 16;
   private static final int MID_BYTES_START = 8;
   private static final int MID_BYTES_END = 12;
   private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+
+  private Utils() {
+  }
 
   public static String bytesToHex(byte[] bytes) {
     char[] hexChars = new char[bytes.length * 2];
@@ -23,6 +25,7 @@ public class Utils {
     return new String(hexChars);
   }
 
+  @SuppressWarnings("java:S127")
   public static byte[] hexToBytes(String strData) {
     char[] data;
     if (strData.startsWith("0x")) {
