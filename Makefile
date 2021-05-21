@@ -16,7 +16,7 @@ BRANCH_NAME ?= $(shell git symbolic-ref -q HEAD )
 SAFE_BRANCH_NAME ?= $(shell if [ -n "$$BRANCH_NAME" ]; then echo $$BRANCH_NAME; else \
 														git symbolic-ref -q HEAD|sed -e \
 														's@refs/heads/@@'|sed -e 's@/@_@g'; \
-														fi)VERSION ?= $(shell git describe | cut -c2-  )
+														fi)
 VERSION ?= $(shell git describe | cut -c2-  )
 LONG_VERSION ?= $(shell git describe --long --dirty |cut -c2- )
 UID := $(shell id -u)
