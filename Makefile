@@ -13,7 +13,10 @@ REPO ?= $(shell git remote show -n origin | grep Fetch | \
 												awk -F'[/.]' '{print $$2}' )
 
 BRANCH_NAME ?= $(shell git symbolic-ref -q HEAD )
-SAFE_BRANCH_NAME ?= $(shell git symbolic-ref -q HEAD|sed -e 's@refs/heads/@@'|sed -e 's@/@_@g' )
+SAFE_BRANCH_NAME ?= $(shell if [ -n "$$BRANCH_NAME" ]; then echo $$BRANCH_NAME; else \
+														git symbolic-ref -q HEAD|sed -e \
+														's@refs/heads/@@'|sed -e 's@/@_@g'; \
+														fi)VERSION ?= $(shell git describe | cut -c2-  )
 VERSION ?= $(shell git describe | cut -c2-  )
 LONG_VERSION ?= $(shell git describe --long --dirty |cut -c2- )
 UID := $(shell id -u)
@@ -109,7 +112,7 @@ analyze_sonar: package
 	[ -z "$(SONAR_AUTH_TOKEN)" ] || \
 	$(DOCKER_MVN) sonar:sonar \
 			-Dsonar.projectKey=$(ORGANIZATION)_$(REPO):$(SAFE_BRANCH_NAME) \
-			-Dsonar.projectName=$(REPO) \
+			-Dsonar.projectName="$(REPO) $(SAFE_BRANCH_NAME)" \
 			-Dsonar.projectVersion=$(VERSION) \
 			-Dsonar.host.url=$(SONAR_HOST_URL) \
 			-Dsonar.login=$(SONAR_AUTH_TOKEN)
