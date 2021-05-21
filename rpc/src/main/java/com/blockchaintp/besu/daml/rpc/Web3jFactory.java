@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
+import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.web3j.protocol.Web3j;
@@ -42,8 +44,7 @@ public class Web3jFactory {
       }
       return service;
     } catch (final IOException e) {
-      LOG.error("Failed to connect to client node", e);
-      throw new RuntimeException(e);
+      throw new DamlBesuRuntimeException("Failed to connect to client node", e);
     }
   }
 

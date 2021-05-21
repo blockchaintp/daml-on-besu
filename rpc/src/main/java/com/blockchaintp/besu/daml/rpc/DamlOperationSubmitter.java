@@ -12,6 +12,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
+import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
 import com.blockchaintp.besu.daml.protobuf.DamlOperation;
 import com.blockchaintp.besu.daml.protobuf.DamlOperationBatch;
 import com.blockchaintp.besu.daml.protobuf.TimeKeeperUpdate;
@@ -93,7 +94,7 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
     Queue<DamlOperationBatch> submittedBatches = new LinkedList<>();
     while (keepRunning) {
       try {
-        if (outstandingItem.size() == 0) {
+        if (outstandingItem.isEmpty()) {
           long startPoll = System.currentTimeMillis();
           DamlOperation op = submitQueue.poll(MAX_WAIT_MS, TimeUnit.MILLISECONDS);
           long timeSpent = System.currentTimeMillis() - startPoll;
@@ -146,35 +147,44 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
           final DamlOperationBatch txBatch = submittedBatches.remove();
           final CompletableFuture<EthSendTransaction> txRespCf = outstandingItem.remove();
 
-          try  {
-            final EthSendTransaction txResp = txRespCf.join();
-            final String txHash = txResp.getTransactionHash();
-            if (this.pessimisticNonce) {
-              this.txReceiptProcessor.waitForTransactionReceipt(txHash);
-              LOG.info("Sending item complete {}", batchCounter);
-            }
-          } catch ( CompletionException ce ) {
-            if (ce.getCause() instanceof ClientConnectionException) {
-              Integer errorCode = extractError(ce);
-              if ( NONCE_TOO_LOW.equals(errorCode) ) {
-                LOG.warn("Received nonce too low exception, resubmitted batch {}", batchCounter);
-                final Request<?, EthSendTransaction> txRequest = createTxRequest(web3, txBatch);
-                submittedBatches.add(txBatch);
-                outstandingItem.add(txRequest.sendAsync());
-                batchCounter++;
-              } else {
-                LOG.warn(String.format("Unhandled errorCode = %s at batch %s", errorCode, batchCounter), ce.getCause());
-              }
-            }
-          }
+          batchCounter += waitForSubmissionComplete(outstandingItem, submittedBatches, txBatch, txRespCf);
         }
       } catch (final InterruptedException e) {
         LOG.warn("Operation submitter thread interrupted", e);
         Thread.currentThread().interrupt();
       } catch (IOException | TransactionException e) {
-        throw new RuntimeException(e);
+        throw new DamlBesuRuntimeException("Unhandled exception, exiting thread",e);
       }
     }
+  }
+
+  private long waitForSubmissionComplete(Queue<CompletableFuture<EthSendTransaction>> outstandingItem,
+      Queue<DamlOperationBatch> submittedBatches, final DamlOperationBatch txBatch,
+      final CompletableFuture<EthSendTransaction> txRespCf)
+      throws IOException, TransactionException, JsonProcessingException, JsonMappingException {
+    long batchCounter = 0;
+    try  {
+      final EthSendTransaction txResp = txRespCf.join();
+      final String txHash = txResp.getTransactionHash();
+      if (this.pessimisticNonce) {
+        this.txReceiptProcessor.waitForTransactionReceipt(txHash);
+        LOG.info("Sending item complete {}", batchCounter);
+      }
+    } catch ( CompletionException ce ) {
+      if (ce.getCause() instanceof ClientConnectionException) {
+        Integer errorCode = extractError(ce);
+        if ( NONCE_TOO_LOW.equals(errorCode) ) {
+          LOG.warn("Received nonce too low exception, resubmitted batch {}", batchCounter);
+          final Request<?, EthSendTransaction> txRequest = createTxRequest(web3, txBatch);
+          submittedBatches.add(txBatch);
+          outstandingItem.add(txRequest.sendAsync());
+          batchCounter++;
+        } else {
+          LOG.warn(String.format("Unhandled errorCode = %s at batch %s", errorCode, batchCounter), ce.getCause());
+        }
+      }
+    }
+    return batchCounter;
   }
 
   private Integer extractError(CompletionException ce) throws JsonProcessingException, JsonMappingException {

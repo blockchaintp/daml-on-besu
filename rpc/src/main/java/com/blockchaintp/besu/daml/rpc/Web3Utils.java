@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.web3j.abi.EventEncoder;
@@ -93,7 +95,8 @@ public class Web3Utils {
     return logs;
   }
 
-  public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to, final byte[] dataBytes) {
+  public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to,
+      final byte[] dataBytes) {
     final String data = Utils.bytesToHex(dataBytes);
     int tries = 0;
     RecoverableException lastException = null;
@@ -103,19 +106,28 @@ public class Web3Utils {
       } catch (RecoverableException e) {
         lastException = e;
         tries++;
-        LOG.warn("Received recoverable exception, sleeping for {}s before retry attempt={}}", getRetryWaitTimeSeconds(), tries);
+        LOG.warn("Received recoverable exception, sleeping for {}s before retry attempt={}}", getRetryWaitTimeSeconds(),
+            tries);
         try {
           TimeUnit.SECONDS.sleep(getRetryWaitTimeSeconds());
         } catch (InterruptedException e1) {
           LOG.warn("Interrupted while asleep waiting to retry", e1);
           Thread.currentThread().interrupt();
+          break;
         }
       }
     }
-    throw new RuntimeException(lastException.getCause());
+    if (null == lastException) {
+      throw new DamlBesuRuntimeException(
+          String.format("Exceeded maximum retries for request %s >= %s ", tries, getMaxRetries()));
+    } else {
+      throw new DamlBesuRuntimeException(String.format("Failed to transmit request after %s retries", tries),
+          lastException.getCause());
+    }
   }
 
-  public Request<?, EthSendTransaction> sendEncodedString(Credentials credentials, String to, String data) throws RecoverableException {
+  public Request<?, EthSendTransaction> sendEncodedString(Credentials credentials, String to, String data)
+      throws RecoverableException {
     LOG.debug("Creating transaction");
     final BigInteger gasLimit = getGasLimit(data.getBytes());
     final BigInteger nonce = getNonce(credentials);
@@ -141,10 +153,10 @@ public class Web3Utils {
           .sendAsync().get();
     } catch (ExecutionException e) {
       if (e.getCause() instanceof SocketTimeoutException) {
-        throw new RecoverableException("Socket timeout received while fetching nonce",e);
+        throw new RecoverableException("Socket timeout received while fetching nonce", e);
       } else {
         LOG.error("Severe error getting transaction nonce", e);
-        throw new RuntimeException(e);
+        throw new DamlBesuRuntimeException("Severe error getting transaction nonce", e);
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
