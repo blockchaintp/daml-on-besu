@@ -26,8 +26,10 @@ import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.DelegatingBytes;
 
 /** A 160-bits account address. */
+@SuppressWarnings("java:S2176")
 public class Address extends DelegatingBytes implements org.hyperledger.besu.plugin.data.Address {
 
+  @SuppressWarnings("java:S1845")
   public static final int SIZE = 20;
 
   /** Specific addresses of the "precompiled" contracts. */

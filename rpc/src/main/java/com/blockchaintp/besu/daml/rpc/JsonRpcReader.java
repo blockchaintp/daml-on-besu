@@ -3,6 +3,7 @@ package com.blockchaintp.besu.daml.rpc;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
 import com.daml.ledger.participant.state.kvutils.OffsetBuilder;
 import com.daml.ledger.participant.state.kvutils.api.LedgerReader;
@@ -38,8 +39,7 @@ public class JsonRpcReader extends AbstractJsonRpcReader<LedgerRecord> implement
           final List<LedgerRecord> lofLr = logToLogRecord(log, logInBlockCtr++);
           updates.addAll(lofLr);
         } catch (final InvalidProtocolBufferException e) {
-          LOG.error("Failure parsing log information", e);
-          throw new RuntimeException(e);
+          throw new DamlBesuRuntimeException("Failure parsing log information", e);
         }
       }
     }

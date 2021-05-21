@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
+import com.blockchaintp.besu.daml.exceptions.RecoverableException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.web3j.abi.EventEncoder;
@@ -22,7 +25,6 @@ import org.web3j.protocol.core.Request;
 import org.web3j.protocol.core.methods.request.EthFilter;
 import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.EthGetTransactionCount;
-import org.web3j.protocol.core.methods.response.EthLog;
 import org.web3j.protocol.core.methods.response.EthLog.LogResult;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.gas.StaticGasProvider;
@@ -88,13 +90,20 @@ public class Web3Utils {
     if (null != event) {
       filter.addSingleTopic(EventEncoder.encode(event));
     }
-    final EthLog ethlog = web3.ethGetLogs(filter).send();
-    final List<LogResult> logs = ethlog.getLogs();
-    return logs;
+    final var ethlog = web3.ethGetLogs(filter).send();
+    return ethlog.getLogs();
   }
 
-  public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to, final byte[] dataBytes) {
+  @SuppressWarnings({"java:S1452"})
+  public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to,
+      final byte[] dataBytes) {
     final String data = Utils.bytesToHex(dataBytes);
+    return sendBytes(credentials, to, data);
+
+  }
+  @SuppressWarnings({"java:S1452","java:S2583"})
+  public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to,
+      final String data) {
     int tries = 0;
     RecoverableException lastException = null;
     while (getMaxRetries() < 0 || tries < getMaxRetries()) {
@@ -103,19 +112,29 @@ public class Web3Utils {
       } catch (RecoverableException e) {
         lastException = e;
         tries++;
-        LOG.warn("Received recoverable exception, sleeping for {}s before retry attempt={}}", getRetryWaitTimeSeconds(), tries);
+        LOG.warn("Received recoverable exception, sleeping for {}s before retry attempt={}}", getRetryWaitTimeSeconds(),
+            tries);
         try {
           TimeUnit.SECONDS.sleep(getRetryWaitTimeSeconds());
         } catch (InterruptedException e1) {
           LOG.warn("Interrupted while asleep waiting to retry", e1);
-          throw new RuntimeException(e1);
+          Thread.currentThread().interrupt();
+          break;
         }
       }
     }
-    throw new RuntimeException(lastException.getCause());
+    if (lastException != null) {
+      throw new DamlBesuRuntimeException(String.format("Failed to transmit request after %s retries", tries),
+          lastException.getCause());
+    } else {
+      throw new DamlBesuRuntimeException(
+          String.format("Exceeded maximum retries for request %s >= %s ", tries, getMaxRetries()));
+    }
   }
 
-  public Request<?, EthSendTransaction> sendEncodedString(Credentials credentials, String to, String data) throws RecoverableException {
+  @SuppressWarnings("java:S1452")
+  public Request<?, EthSendTransaction> sendEncodedString(Credentials credentials, String to, String data)
+      throws RecoverableException {
     LOG.debug("Creating transaction");
     final BigInteger gasLimit = getGasLimit(data.getBytes());
     final BigInteger nonce = getNonce(credentials);
@@ -130,8 +149,7 @@ public class Web3Utils {
     final String rtxSigned = Utils.bytesToHex(rtxSignedBytes);
 
     LOG.debug("Creating request");
-    final Request<?, EthSendTransaction> ethSendTx = web3.ethSendRawTransaction(rtxSigned);
-    return ethSendTx;
+    return web3.ethSendRawTransaction(rtxSigned);
   }
 
   protected BigInteger getNonce(final Credentials credentials) throws RecoverableException {
@@ -141,14 +159,14 @@ public class Web3Utils {
           .sendAsync().get();
     } catch (ExecutionException e) {
       if (e.getCause() instanceof SocketTimeoutException) {
-        throw new RecoverableException("Socket timeout received while fetching nonce",e);
+        throw new RecoverableException("Socket timeout received while fetching nonce", e);
       } else {
         LOG.error("Severe error getting transaction nonce", e);
-        throw new RuntimeException(e);
+        throw new DamlBesuRuntimeException("Severe error getting transaction nonce", e);
       }
     } catch (InterruptedException e) {
-      LOG.error("Interrupted while getting nonce", e);
-      throw new RuntimeException(e);
+      Thread.currentThread().interrupt();
+      throw new RecoverableException("Interrupted while getting nonce", e);
     }
     final BigInteger nonce = ethGetTransactionCount.getTransactionCount();
     final long val = nonce.longValue();
@@ -173,13 +191,5 @@ public class Web3Utils {
 
   protected BigInteger getGasPrice() {
     return this.gasProvider.getGasPrice();
-  }
-
-  private class RecoverableException extends Exception {
-
-    public RecoverableException(String message, ExecutionException e) {
-      super(message, e);
-    }
-
   }
 }

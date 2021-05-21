@@ -75,18 +75,18 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
   }
 
   @Override
+  @SuppressWarnings("java:S1612")
   public ByteString getDamlState(final ByteString key) {
     LOG.trace("Getting DAML state for key={}", key);
 
     final UInt256 address = Namespace.makeDamlStateKeyAddress(key);
-    LOG.trace("DAML state key address={}", address.toHexString());
+    LOG.trace("DAML state key address={}", () -> address.toHexString());
     final ByteBuffer buf = getLedgerEntry(address);
     if (buf == null) {
-      LOG.trace("No ledger entry for DAML state key address={}", address.toHexString());
+      LOG.trace("No ledger entry for DAML state key address={}", () -> address.toHexString());
       return null;
     }
-    final ByteString bs = ByteString.copyFrom(buf);
-    return bs;
+    return ByteString.copyFrom(buf);
   }
 
   @Override
@@ -106,11 +106,12 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
     return getDamlStates(Lists.newArrayList(keys));
   }
 
+  @SuppressWarnings({"java:S1612"})
   private ByteBuffer getLedgerEntry(final UInt256 key) {
     // reconstitute RLP bytes from all ethereum slices created for this ledger
     // entry
     final MutableBytes32 slot = key.toBytes().mutableCopy();
-    LOG.debug("Will fetch slices starting at rootKey={}", slot.toHexString());
+    LOG.debug("Will fetch slices starting at rootKey={}", () -> slot.toHexString());
     UInt256 data = account.getStorageValue(UInt256.fromBytes(slot));
     int slices = 1;
     Bytes rawRlp = Bytes.EMPTY;
@@ -136,7 +137,7 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
       if (data.isZero()) {
         continue;
       }
-      if (slices % 100 == 0) {
+      if (LOG.isTraceEnabled() && (slices % 100 == 0)) {
         LOG.trace("Fetched from rootKey={} slices={} size={}", key.toHexString(), slices, rawRlp.size());
       }
       deadBeef = data.toHexString();
@@ -149,7 +150,9 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
       }
     }
     rawRlp = Bytes.concatenate(dataSoFar.toArray(new Bytes[] {}));
-    LOG.debug("Fetched from rootKey={} slices={} size={}", key.toHexString(), slices, rawRlp.size());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Fetched from rootKey={} slices={} size={}", key.toHexString(), slices, rawRlp.size());
+    }
     if (rawRlp.size() != 0) {
       try {
         final Bytes entry = RLP.decodeOne(rawRlp);
@@ -158,7 +161,7 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
         LOG.error("RLP Serialization eror encountered, original input data to follow");
         int index=0;
         for (Bytes b : unaltered ) {
-          LOG.error("slot={} data=", index, b.toHexString());
+          LOG.error("slot={} data={}", index, b.toHexString());
           index++;
         }
         throw e;
@@ -171,6 +174,15 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
   private UInt256 makeDeadBeef(final Integer numberOfZeros) {
     final String deadBeef = "0xDEAD" + numberOfZeros.toString();
     return UInt256.fromHexString(deadBeef);
+  }
+
+  private UInt256 maybeMakeDeadBeef(Bytes data) {
+      UInt256 part = UInt256.fromBytes(data);
+      if (data.size() > 0 && part.isZero()) {
+        return makeDeadBeef(data.size());
+      } else {
+        return part;
+      }
   }
 
   private Bytes fromDeadBeef(final UInt256 data) {
@@ -192,24 +204,25 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
    * @param rootAddress 256-bit ethereum storage slot address
    * @param entry       value to store in the ledger
    */
+  @SuppressWarnings("java:S1612")
   private void addLedgerEntry(final UInt256 rootAddress, final ByteString entry) {
     // RLP-encode the entry
     final Bytes encoded = RLP.encodeOne(Bytes.of(entry.toByteArray()));
     final MutableBytes32 slot = rootAddress.toBytes().mutableCopy();
-    LOG.debug("Writing starting at address={} bytes={}", rootAddress.toHexString(), encoded.size());
+    LOG.debug("Writing starting at address={} bytes={}", () -> rootAddress.toHexString(), () -> encoded.size());
 
     // store the first part of the entry
     final int sliceSz = Math.min(Namespace.STORAGE_SLOT_SIZE, encoded.size());
     Bytes data = encoded.slice(0, sliceSz);
-    UInt256 part = UInt256.fromBytes(data);
-    if (data.size() > 0 && part.isZero()) {
-      part = makeDeadBeef(data.size());
-    }
-    int slices = 0;
+    UInt256 part = maybeMakeDeadBeef(data);
+
+    var slices = 0;
     account.setStorageValue(UInt256.fromBytes(slot), part);
 
-    LOG.trace("Wrote to address={} slice={} total bytes={}", UInt256.fromBytes(slot).toHexString(),
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Wrote to address={} slice={} total bytes={}", UInt256.fromBytes(slot).toHexString(),
         slices, part.toShortHexString());
+    }
 
     // Store remaining parts, if any. We ensure that the data is stored in
     // consecutive
@@ -229,19 +242,19 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
           continue;
         }
       }
-      part = UInt256.fromBytes(data);
 
-      if (data.size() > 0 && part.isZero()) {
-        part = makeDeadBeef(data.size());
-      }
+      part = maybeMakeDeadBeef(data);
+
       slot.increment();
       slices++;
       account.setStorageValue(UInt256.fromBytes(slot), part);
 
-      LOG.trace("Wrote to address={} slice={} total bytes={}", UInt256.fromBytes(slot).toHexString(),
-          slices, part.toShortHexString());
-      if (slices % 100 == 0) {
-        LOG.trace("Wrote to address={} slices={} offset={}", rootAddress.toHexString(), slices, offset);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Wrote to address={} slice={} total bytes={}", UInt256.fromBytes(slot).toHexString(),
+            slices, part.toShortHexString());
+        if (slices % 100 == 0) {
+          LOG.trace("Wrote to address={} slices={} offset={}", rootAddress.toHexString(), slices, offset);
+        }
       }
       offset += Namespace.STORAGE_SLOT_SIZE;
     }
@@ -249,8 +262,8 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
     slot.increment();
     slices++;
     account.setStorageValue(UInt256.fromBytes(slot), UInt256.ZERO);
-
-    LOG.debug("Wrote to address={} slices={} total size={}", rootAddress.toHexString(), slices, encoded.size());
+    final var logSlices=slices;
+    LOG.debug("Wrote to address={} slices={} total size={}", () -> rootAddress.toHexString(), () -> logSlices, () -> encoded.size());
   }
 
   @Override
@@ -272,7 +285,7 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
   public DamlLogEvent sendLogEvent(final Address fromAddress, final LogTopic topic, final ByteString entryId,
       final ByteString entry) throws InternalError {
     final DamlLogEvent logEvent = DamlLogEvent.newBuilder().setLogEntry(entry).setLogEntryId(entryId).build();
-    LOG.info("Publishing DamlLogEvent size={}", logEvent.toByteArray().length);
+    LOG.info("Publishing DamlLogEvent from={} size={}", fromAddress, logEvent.toByteArray().length);
     final Log event = new Log(Address.DAML_PUBLIC, Bytes.of(logEvent.toByteArray()), Lists.newArrayList(topic));
     this.messageFrame.addLog(event);
     return logEvent;
@@ -300,7 +313,7 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
 
       final com.google.protobuf.Timestamp timestamp = com.google.protobuf.Timestamp.newBuilder().setSeconds(ts)
           .setNanos(0).build();
-      LOG.debug("Record Time = {}", timestamp.toString());
+      LOG.debug("Record Time = {}", timestamp);
       final long micros = Timestamps.toMicros(timestamp);
       return new Timestamp(micros);
     } else {

@@ -12,6 +12,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
+import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
 import com.blockchaintp.besu.daml.protobuf.DamlOperation;
 import com.blockchaintp.besu.daml.protobuf.DamlOperationBatch;
 import com.blockchaintp.besu.daml.protobuf.TimeKeeperUpdate;
@@ -93,14 +94,14 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
     Queue<DamlOperationBatch> submittedBatches = new LinkedList<>();
     while (keepRunning) {
       try {
-        if (outstandingItem.size() == 0) {
+        if (outstandingItem.isEmpty()) {
           long startPoll = System.currentTimeMillis();
           DamlOperation op = submitQueue.poll(MAX_WAIT_MS, TimeUnit.MILLISECONDS);
           long timeSpent = System.currentTimeMillis() - startPoll;
           long nextPoll = Math.max(MAX_WAIT_MS - timeSpent, 1L);
           final DamlOperationBatch.Builder builder = DamlOperationBatch.newBuilder();
-          boolean opsAdded = false;
-          int opCounter = 0;
+          var opsAdded = false;
+          var opCounter = 0;
           while (op != null ) {
             builder.addOperations(op);
             opCounter++;
@@ -124,7 +125,7 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
             lastInstantUpdate = now;
             opsAdded = true;
           } else if (lastInstantUpdate != null) {
-            Duration res = Duration.between(lastInstantUpdate, now);
+            var res = Duration.between(lastInstantUpdate, now);
             if (res.compareTo(this.timeUpdateInterval) >= 0 ) {
               final DamlOperation tUpdate = sendTimeUpdate(now);
               builder.addOperations(tUpdate);
@@ -146,34 +147,47 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
           final DamlOperationBatch txBatch = submittedBatches.remove();
           final CompletableFuture<EthSendTransaction> txRespCf = outstandingItem.remove();
 
-          try  {
-            final EthSendTransaction txResp = txRespCf.join();
-            final String txHash = txResp.getTransactionHash();
-            if (this.pessimisticNonce) {
-              this.txReceiptProcessor.waitForTransactionReceipt(txHash);
-              LOG.info("Sending item complete {}", batchCounter);
-            }
-          } catch ( CompletionException ce ) {
-            if (ce.getCause() instanceof ClientConnectionException) {
-              Integer errorCode = extractError(ce);
-              if ( NONCE_TOO_LOW.equals(errorCode) ) {
-                LOG.warn("Received nonce too low exception, resubmitted batch {}", batchCounter);
-                final Request<?, EthSendTransaction> txRequest = createTxRequest(web3, txBatch);
-                submittedBatches.add(txBatch);
-                outstandingItem.add(txRequest.sendAsync());
-                batchCounter++;
-              } else {
-                LOG.warn(String.format("Unhandled errorCode = %s at batch %s", errorCode, batchCounter), ce.getCause());
-              }
-            }
-          }
+          batchCounter += waitForSubmissionComplete(outstandingItem, submittedBatches, txBatch, txRespCf);
         }
-      } catch (final InterruptedException | IOException | TransactionException e) {
-        throw new RuntimeException(e);
+      } catch (final InterruptedException e) {
+        LOG.warn("Operation submitter thread interrupted", e);
+        Thread.currentThread().interrupt();
+      } catch (IOException | TransactionException e) {
+        throw new DamlBesuRuntimeException("Unhandled exception, exiting thread",e);
       }
     }
   }
 
+  private long waitForSubmissionComplete(Queue<CompletableFuture<EthSendTransaction>> outstandingItem,
+      Queue<DamlOperationBatch> submittedBatches, final DamlOperationBatch txBatch,
+      final CompletableFuture<EthSendTransaction> txRespCf)
+      throws IOException, TransactionException, JsonProcessingException, JsonMappingException {
+    long batchCounter = 0;
+    try  {
+      final EthSendTransaction txResp = txRespCf.join();
+      final String txHash = txResp.getTransactionHash();
+      if (this.pessimisticNonce) {
+        this.txReceiptProcessor.waitForTransactionReceipt(txHash);
+        LOG.info("Sending item complete {}", batchCounter);
+      }
+    } catch ( CompletionException ce ) {
+      if (ce.getCause() instanceof ClientConnectionException) {
+        Integer errorCode = extractError(ce);
+        if ( NONCE_TOO_LOW.equals(errorCode) ) {
+          LOG.warn("Received nonce too low exception, resubmitted batch {}", batchCounter);
+          final Request<?, EthSendTransaction> txRequest = createTxRequest(web3, txBatch);
+          submittedBatches.add(txBatch);
+          outstandingItem.add(txRequest.sendAsync());
+          batchCounter++;
+        } else {
+          LOG.warn(String.format("Unhandled errorCode = %s at batch %s", errorCode, batchCounter), ce.getCause());
+        }
+      }
+    }
+    return batchCounter;
+  }
+
+  @SuppressWarnings("all")
   private Integer extractError(CompletionException ce) throws JsonProcessingException, JsonMappingException {
     ClientConnectionException cce = (ClientConnectionException) ce.getCause();
     String message = cce.getMessage();
@@ -182,8 +196,7 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
     HashMap<String, Object> errorMap = new ObjectMapper().readValue(jsonPayload, HashMap.class);
     if (errorMap.containsKey("error")) {
       HashMap<String,Object> error = (HashMap<String, Object>) errorMap.get("error");
-      Integer errorCode = Integer.parseInt(error.getOrDefault("code","0").toString());
-      return errorCode;
+      return Integer.parseInt(error.getOrDefault("code","0").toString());
     }
     return 0;
   }
@@ -191,12 +204,11 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
   private DamlOperation sendTimeUpdate(final Instant now) {
     final com.google.protobuf.Timestamp nowMillis = Timestamps.fromMillis(now.toEpochMilli());
     final TimeKeeperUpdate tkUpdate = TimeKeeperUpdate.newBuilder().setTimeUpdate(nowMillis).build();
-    final DamlOperation operation = DamlOperation.newBuilder().setSubmittingParticipant(participantId)
+    return DamlOperation.newBuilder().setSubmittingParticipant(participantId)
         .setTimeUpdate(tkUpdate).build();
-
-    return operation;
   }
 
+  @SuppressWarnings("java:S1452")
   protected Request<?, EthSendTransaction> createTxRequest(final Web3j web3, final DamlOperationBatch batch) {
     final Web3Utils utils = new Web3Utils(web3);
     return utils.sendBytes(getCredentials(), JsonRpcWriter.DAML_PUBLIC_ADDRESS, batch.toByteArray());

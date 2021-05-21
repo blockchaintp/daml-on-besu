@@ -38,7 +38,7 @@ public class ProtocolSpecBuilder<T> {
   private Wei blockReward;
   private boolean skipZeroBlockRewards;
   private BlockHeaderFunctions blockHeaderFunctions;
-  private MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
+  private AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory;
   private DifficultyCalculator<T> difficultyCalculator;
   private Function<GasCalculator, EVM> evmBuilder;
   private Function<GasCalculator, TransactionValidator> transactionValidatorBuilder;
@@ -82,7 +82,7 @@ public class ProtocolSpecBuilder<T> {
   }
 
   public ProtocolSpecBuilder<T> transactionReceiptFactory(
-      final MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory) {
+      final AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory) {
     this.transactionReceiptFactory = transactionReceiptFactory;
     return this;
   }
@@ -135,7 +135,7 @@ public class ProtocolSpecBuilder<T> {
       final Function<PrecompiledContractConfiguration, PrecompileContractRegistry>
           precompileContractRegistryBuilder) {
     this.precompileContractRegistryBuilder =
-        (precompiledContractConfiguration) -> {
+        precompiledContractConfiguration -> {
           final PrecompileContractRegistry registry =
               precompileContractRegistryBuilder.apply(precompiledContractConfiguration);
           if (precompiledContractConfiguration.getPrivacyParameters().isEnabled()) {
@@ -368,7 +368,7 @@ public class ProtocolSpecBuilder<T> {
   public interface BlockProcessorBuilder {
     BlockProcessor apply(
         TransactionProcessor transactionProcessor,
-        MainnetBlockProcessor.TransactionReceiptFactory transactionReceiptFactory,
+        AbstractBlockProcessor.TransactionReceiptFactory transactionReceiptFactory,
         Wei blockReward,
         MiningBeneficiaryCalculator miningBeneficiaryCalculator,
         boolean skipZeroBlockRewards);

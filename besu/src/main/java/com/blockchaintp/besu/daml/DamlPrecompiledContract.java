@@ -19,6 +19,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 
+import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
 import com.blockchaintp.besu.daml.protobuf.DamlOperation;
 import com.blockchaintp.besu.daml.protobuf.DamlOperationBatch;
@@ -45,7 +46,7 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
 
   private Metrics metricsRegistry;
 
-  public DamlPrecompiledContract(final String name, final GasCalculator gasCalculator) {
+  protected DamlPrecompiledContract(final String name, final GasCalculator gasCalculator) {
     super(name, gasCalculator);
     initalize();
   }
@@ -57,7 +58,7 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
     try {
       hostname = InetAddress.getLocalHost().getHostName();
     } catch (final UnknownHostException e) {
-      throw new RuntimeException(e);
+      throw new DamlBesuRuntimeException("Cannot get local hostname");
     }
     this.metricsRegistry = new Metrics(SharedMetricRegistries.getOrCreate(hostname));
   }

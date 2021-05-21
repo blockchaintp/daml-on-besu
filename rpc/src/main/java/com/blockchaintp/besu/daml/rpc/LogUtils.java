@@ -11,6 +11,10 @@ import org.apache.logging.log4j.core.config.Configurator;
  * like SLF4J or Apache Commons Logging.
  */
 public class LogUtils {
+
+  private LogUtils() {
+  }
+
   // I tried to avoid this, but SLF4J doesn't have an always() log method like logj4
   private static final Logger LOG = LogManager.getLogger();
 

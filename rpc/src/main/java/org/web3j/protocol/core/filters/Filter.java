@@ -35,6 +35,7 @@ import org.web3j.protocol.core.methods.response.EthUninstallFilter;
 import org.web3j.protocol.exceptions.ClientConnectionException;
 
 /** Class for creating managed filter requests with callbacks. */
+@SuppressWarnings("all")
 public abstract class Filter<T> {
 
     private static final Logger log = LoggerFactory.getLogger(Filter.class);
@@ -134,9 +135,11 @@ public abstract class Filter<T> {
             if ( e.getMessage().contains("Filter not found")) {
                 reinstallFilter();
                 return;
+            } else {
+              throw new FilterException("Error sending request", e);
             }
         } catch (IOException e) {
-            throwException(e);
+            throw new FilterException("Error sending request", e);
         }
         if (ethLog.hasError()) {
             Error error = ethLog.getError();

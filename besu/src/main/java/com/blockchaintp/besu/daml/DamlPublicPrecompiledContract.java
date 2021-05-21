@@ -17,6 +17,7 @@ package com.blockchaintp.besu.daml;
 
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
 import com.blockchaintp.besu.daml.protobuf.DamlTransaction;
@@ -41,15 +42,17 @@ public final class DamlPublicPrecompiledContract extends DamlPrecompiledContract
 
   private static final String CONTRACT_NAME = "DamlPublic";
 
+  private ExecutionContext ec;
+
   public DamlPublicPrecompiledContract(final GasCalculator gasCalculator) {
     super(CONTRACT_NAME, gasCalculator);
+    this.ec = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool());
     initalize();
   }
 
   @Override
   protected LedgerState<DamlLogEvent> messageFrameToLedgerState(final MessageFrame messageFrame) {
-    final LedgerState<DamlLogEvent> ledgerState = new MutableAccountLedgerState(messageFrame);
-    return ledgerState;
+    return new MutableAccountLedgerState(messageFrame);
   }
 
   @Override
@@ -62,10 +65,8 @@ public final class DamlPublicPrecompiledContract extends DamlPrecompiledContract
       LOG.warn("InvalidProtocolBufferException when parsing log entry id", e1);
       throw new InvalidTransactionException(e1.getMessage());
     }
-    final ExecutionContext ec = ExecutionContext.fromExecutor(ExecutionContext.global());
-    final SubmissionValidator<DamlLogEvent> validator = SubmissionValidator.create(ledgerState, () -> {
-      return logEntryId;
-    }, false, Cache.none(), getEngine(), getMetricsRegistry(), ec);
+    final SubmissionValidator<DamlLogEvent> validator = SubmissionValidator.create(ledgerState, () -> logEntryId
+    , false, Cache.none(), getEngine(), getMetricsRegistry(), getEc());
     final com.daml.lf.data.Time.Timestamp recordTime = ledgerState.getRecordTime();
     final Future<Either<ValidationFailed, DamlLogEvent>> validateAndCommit = validator
         .validateAndCommit(tx.getSubmission(), correlationId, recordTime, participantId);
@@ -74,16 +75,21 @@ public final class DamlPublicPrecompiledContract extends DamlPrecompiledContract
     try {
       final Either<ValidationFailed, DamlLogEvent> either = validateAndCommitCS.toCompletableFuture().get();
       if (either.isLeft()) {
-        final ValidationFailed validationFailed = either.left().get();
+        final var validationFailed = either.left().get();
         throw new InvalidTransactionException(validationFailed.toString());
       } else {
-        final DamlLogEvent logEvent = either.right().get();
-        LOG.debug("Processed transaction into log event {}",
-            logEvent.getLogEntryId().toStringUtf8());
-        return;
+        LOG.debug("Processed transaction into log event cid={}",correlationId);
       }
-    } catch (InterruptedException | ExecutionException e) {
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted while handling transaction",e);
+      Thread.currentThread().interrupt();
+    } catch (ExecutionException e) {
       throw new InternalError(e.getMessage());
     }
   }
+
+  private ExecutionContext getEc() {
+    return ec;
+  }
+
 }
