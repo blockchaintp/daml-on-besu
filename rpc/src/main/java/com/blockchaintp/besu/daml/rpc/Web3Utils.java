@@ -51,24 +51,26 @@ public class Web3Utils {
     this.setRetryWaitTimeSeconds(DEFAULT_WAIT_BEFORE_RETRY_SECONDS);
   }
 
-  private int getMaxRetries() {
+  protected Web3Utils() {
+    this.gasProvider = new StaticGasProvider(BigInteger.ZERO, BigInteger.valueOf(3000000));
+    this.setMaxRetries(DEFAULT_MAX_RETRIES);
+    this.setRetryWaitTimeSeconds(DEFAULT_WAIT_BEFORE_RETRY_SECONDS);
+  }
+
+  protected int getMaxRetries() {
     return maxRetries;
   }
 
-  private void setMaxRetries(int maxRetries) {
+  protected void setMaxRetries(int maxRetries) {
     this.maxRetries = maxRetries;
   }
 
-  private int getRetryWaitTimeSeconds() {
+  protected int getRetryWaitTimeSeconds() {
     return retryWaitTimeSeconds;
   }
 
-  private void setRetryWaitTimeSeconds(int retryWaitTimeSeconds) {
+  protected void setRetryWaitTimeSeconds(int retryWaitTimeSeconds) {
     this.retryWaitTimeSeconds = retryWaitTimeSeconds;
-  }
-
-  protected Web3Utils() {
-    this.gasProvider = new StaticGasProvider(BigInteger.ZERO, BigInteger.valueOf(3000000));
   }
 
   protected void setWeb3(final Web3j web3) {
