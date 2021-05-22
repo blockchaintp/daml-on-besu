@@ -2,15 +2,16 @@
 
 RESULTS_FILE=$1
 
-RESULTS_TAG=$2
-
 TEST_COUNT=$(grep -c "\- \[[A-Z]" "$RESULTS_FILE")
 
-echo "1..${TEST_COUNT}"
-
-if [ "$TEST_COUNT" -eq 0 ]; then
-  exit 1
+if [ "${TEST_COUNT}" -eq 0 ]; then
+  echo "1..1"
+  echo "not ok 1 abject failure"
+  echo "# Tests completely failed to run"
+  exit 0
 fi
+
+echo "1..${TEST_COUNT}"
 
 count=0
 grep "\- \[[A-Z]" "$RESULTS_FILE" | sort |
@@ -23,9 +24,6 @@ grep "\- \[[A-Z]" "$RESULTS_FILE" | sort |
       status="not ok"
     fi
     count=$((count + 1))
-    if [ -n "$RESULTS_TAG" ]; then
-      test_name="($RESULTS_TAG) $test_name"
-    fi
     echo "$status $count $test_name"
     echo "# $LINE"
   done
