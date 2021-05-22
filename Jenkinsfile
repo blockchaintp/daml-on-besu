@@ -82,9 +82,6 @@ pipeline {
     }
 
     stage("Analyze") {
-      when {
-        expression { env.BRANCH_NAME == "main" }
-      }
       steps {
         withSonarQubeEnv('sonarqube') {
           configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
@@ -93,6 +90,12 @@ pipeline {
             '''
           }
         }
+      }
+    }
+
+    stage("Quality gate") {
+      steps {
+        waitForQualityGate abortPipeline: true
       }
     }
 
