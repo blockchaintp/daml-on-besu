@@ -125,6 +125,9 @@ pipeline {
   }
 
   post {
+    success {
+      echo "Successfully completed"
+    }
     aborted {
       error "Aborted, exiting now"
     }

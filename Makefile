@@ -102,7 +102,7 @@ clean_test_public_ibft:
 	docker-compose -p $(ISOLATION_ID) -f docker/daml-test-public-ibft.yaml \
 		rm -f || true
 	docker-compose -p $(ISOLATION_ID) -f docker/daml-test-public-ibft.yaml down \
-		-v --rmi all || true
+		-v || true
 
 .PHONY: analyze
 analyze: analyze_sonar
@@ -121,7 +121,7 @@ analyze_sonar: package
 clean: clean_dirs clean_test_public_ibft
 	$(DOCKER_MVN) clean || true
 	docker-compose -f docker/docker-compose-build.yaml rm -f || true
-	docker-compose -f docker/docker-compose-build.yaml down -v --rmi all || true
+	docker-compose -f docker/docker-compose-build.yaml down -v || true
 
 .PHONY: archive
 archive: dirs
