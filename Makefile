@@ -146,5 +146,5 @@ archive: dirs
 .PHONY: publish
 publish: build_toolchain
 	$(DOCKER_MVN) -Drevision=0.0.0 versions:set -DnewVersion=$(MAVEN_REVISION)
-	echo $(DOCKER_MVN) clean deploy -DupdateReleaseInfo=$(MAVEN_UPDATE_RELEASE_INFO) \
+	$(DOCKER_MVN) clean deploy -DupdateReleaseInfo=$(MAVEN_UPDATE_RELEASE_INFO) \
 		-DaltDeploymentRepository=$(MAVEN_DEPLOY_TARGET)
