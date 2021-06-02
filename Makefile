@@ -31,12 +31,14 @@ MAVEN_REVISION != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
 	fi
 
 MAVEN_REPO_BASE ?= https://dev.catenasys.com/repository/catenasys-maven
-MAVEN_REPO_TARGET != if [ "$(LONG_VERSION)" = "$(VERSION)" ]; then \
+MAVEN_REPO_TARGET != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
+	(echo "$(LONG_VERSION)" | grep -q dirty); then \
 		echo snapshots; \
 	else \
-		echo releasses; \
+		echo releases; \
 	fi
-MAVEN_UPDATE_RELEASE_INFO != if [ "$(LONG_VERSION)" = "$(VERSION)" ]; then \
+MAVEN_UPDATE_RELEASE_INFO != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
+	(echo "$(LONG_VERSION)" | grep -q dirty); then \
 		echo false; \
 	else \
 		echo true; \
@@ -144,5 +146,5 @@ archive: dirs
 .PHONY: publish
 publish: build_toolchain
 	$(DOCKER_MVN) -Drevision=0.0.0 versions:set -DnewVersion=$(MAVEN_REVISION)
-	$(DOCKER_MVN) clean deploy -DupdateReleaseInfo=$(MAVEN_UPDATE_RELEASE_INFO) \
+	echo $(DOCKER_MVN) clean deploy -DupdateReleaseInfo=$(MAVEN_UPDATE_RELEASE_INFO) \
 		-DaltDeploymentRepository=$(MAVEN_DEPLOY_TARGET)
