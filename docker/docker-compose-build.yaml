@@ -19,12 +19,12 @@ services:
   toolchain:
     build:
       context: .
-      dockerfile: toolchain.dockerfile
+      dockerfile: toolchain.docker
     image: toolchain:${ISOLATION_ID}
     container_name: toolchain
   ledger-api-testtool:
     build:
       context: .
-      dockerfile: ledger-api-testtool.dockerfile
+      dockerfile: ledger-api-testtool.docker
     image: ledger-api-testtool:${ISOLATION_ID}
     container_name: ledger-api-testtool
