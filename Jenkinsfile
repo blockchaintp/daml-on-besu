@@ -1,6 +1,6 @@
 #!groovy
 
-// Copyright 2020 Blockchain Technology Partners
+// Copyright 2021 Blockchain Technology Partners
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,21 +15,20 @@
 // limitations under the License.
 // ------------------------------------------------------------------------------
 
+
 pipeline {
-  agent {
-    node { label 'worker' }
-  }
+  agent { node { label 'worker' } }
 
-  triggers{cron('H H * * *')}
+  triggers {cron('H H * * *')}
 
-  options{
+  options {
     ansiColor('xterm')
     timestamps()
     buildDiscarder(logRotator(daysToKeepStr: '31'))
     disableConcurrentBuilds()
   }
 
-  environment{
+  environment {
     ISOLATION_ID = sh(returnStdout: true, script: 'echo $BUILD_TAG | sha256sum | cut -c1-32').trim()
     PROJECT_ID = sh(returnStdout: true, script: 'echo $BUILD_TAG | sha256sum | cut -c1-32').trim()
   }
@@ -37,16 +36,24 @@ pipeline {
   stages {
     stage('Fetch Tags') {
       steps {
-        checkout([$class:'GitSCM',branches:[[name:"${GIT_BRANCH}"]],
-                  doGenerateSubmoduleConfigurations:false,
-                  extensions:[],
-                  submoduleCfg:[],
-                  userRemoteConfigs:
-                    [[credentialsId:'github-credentials',
-                      noTags:false, url:"${GIT_URL}"]],
-                      extensions:[[$class:'CloneOption',
-                                    shallow:false, noTags:false,
-                                    timeout:60]]])
+        checkout([$class: 'GitSCM', branches: [[name: "${GIT_BRANCH}"]],
+                  doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [],
+                  userRemoteConfigs: [
+                    [
+                      credentialsId: 'github-credentials',
+                      noTags:false,
+                      url: "${GIT_URL}"
+                    ]
+                  ],
+                  extensions: [
+                    [
+                      $class: 'CloneOption',
+                      shallow: false,
+                      noTags: false,
+                      timeout: 60
+                    ]
+                  ]
+                ])
       }
     }
 
@@ -76,25 +83,21 @@ pipeline {
           sh '''
             make test
           '''
-          step([$class: "TapPublisher", testResults: "build/daml-test-public-ibft.results"])
         }
+        junit '**/target/surefire-reports/*.xml'
+        step([$class: "TapPublisher", testResults: "build/daml-test-public-ibft.results"])
       }
     }
 
     stage("Analyze") {
       steps {
-        withSonarQubeEnv('sonarqube') {
+        withSonarQubeEnv('sonarcloud') {
           configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
             sh '''
-              make clean analyze
+              make analyze
             '''
           }
         }
-      }
-    }
-
-    stage("Quality gate") {
-      steps {
         waitForQualityGate abortPipeline: true
       }
     }
@@ -117,7 +120,7 @@ pipeline {
       steps {
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
           sh '''
-            make clean publish
+            make publish
           '''
         }
       }
@@ -129,10 +132,10 @@ pipeline {
       echo "Successfully completed"
     }
     aborted {
-      error "Aborted, exiting now"
+        error "Aborted, exiting now"
     }
     failure {
-      error "Failed, exiting now"
+        error "Failed, exiting now"
     }
   }
 }

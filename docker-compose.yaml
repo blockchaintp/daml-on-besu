@@ -32,5 +32,5 @@ services:
   ledger-api-testtool:
     build:
       context: .
-      dockerfile: docker/ledger-api-testtool.dockerfile
+      dockerfile: docker/ledger-api-testtool.docker
     image: ledger-api-testtool:$ISOLATION_ID

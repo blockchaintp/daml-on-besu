@@ -14,8 +14,8 @@
 # ------------------------------------------------------------------------------
 FROM maven:3-jdk-11
 
-RUN mkdir -p /project/daml-on-besu
+RUN mkdir -p /project
 
-WORKDIR /project/daml-on-besu
+WORKDIR /project
 ENV BUILD_UID=0
 CMD mvn -B package

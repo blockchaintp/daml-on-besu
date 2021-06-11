@@ -36,3 +36,5 @@ test-dars
 .idea
 *.iml
 build
+markers
+**/pom.xml.versionsBackup
