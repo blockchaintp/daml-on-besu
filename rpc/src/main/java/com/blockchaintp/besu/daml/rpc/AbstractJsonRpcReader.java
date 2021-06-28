@@ -105,6 +105,6 @@ public abstract class AbstractJsonRpcReader<T> {
   }
 
   @SuppressWarnings("rawtypes")
-  protected abstract void handleEthLogs(List<LogResult> logs, UnicastProcessor<T> processor);
+  protected abstract void handleEthLogs(List<LogResult> logs, UnicastProcessor<T> processor) throws IOException;
 
 }
