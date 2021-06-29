@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Unreleased
+
+* Log derserialisation can throw [view commit](https://github.com/blockchaintp/daml-on-besu/commit/dcfc6819b4835ed41acea850c751cb7d0495ca5e)
+
+## v1.4.6
+
+
 ## v1.4.5
 
 * fix: adjust visibility of methods on Web3Utils [view commit](https://github.com/blockchaintp/daml-on-besu/commit/2ddfc1578a5858e1d56b50b3b94168d718685ea4)
