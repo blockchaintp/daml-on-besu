@@ -2,21 +2,15 @@ export ISOLATION_ID ?= local
 PWD = $(shell pwd)
 
 ORGANIZATION ?= $(shell git remote show -n origin | grep Fetch | \
-												awk '{print $$NF}' | \
-												sed -e 's/git@github.com://' | \
-												sed -e 's@https://github.com/@@' | \
-												awk -F'[/.]' '{print $$1}' )
-REPO ?= $(shell git remote show -n origin | grep Fetch | \
-												awk '{print $$NF}' | \
-												sed -e 's/git@github.com://' | \
-												sed -e 's@https://github.com/@@' | \
-												awk -F'[/.]' '{print $$2}' )
-
-BRANCH_NAME ?= $(shell git symbolic-ref -q HEAD )
-SAFE_BRANCH_NAME ?= $(shell if [ -n "$$BRANCH_NAME" ]; then echo $$BRANCH_NAME; else \
-														git symbolic-ref -q HEAD|sed -e \
-														's@refs/heads/@@'|sed -e 's@/@_@g'; \
-														fi)
+	awk '{print $$NF}' | sed -e 's/git@github.com://' | \
+	sed -e 's@https://github.com/@@' | awk -F'[/.]' '{print $$1}' )
+REPO ?= $(shell git remote show -n origin | grep Fetch | awk '{print $$NF}' | \
+	sed -e 's/git@github.com://' | sed -e 's@https://github.com/@@' | \
+	awk -F'[/.]' '{print $$2}' )
+BRANCH_NAME ?= $(shell git symbolic-ref -q HEAD |sed -e 's@refs/heads/@@')
+SAFE_BRANCH_NAME ?= $(shell if [ -n "$$BRANCH_NAME" ]; then echo $$BRANCH_NAME;\
+	else git symbolic-ref -q HEAD|sed -e 's@refs/heads/@@'|sed -e 's@/@_@g'; fi)
+PR_KEY=$(shell echo $(BRANCH_NAME) | cut -c4-)
 VERSION ?= $(shell git describe | cut -c2-  )
 LONG_VERSION ?= $(shell git describe --long --dirty |cut -c2- )
 UID := $(shell id -u)
@@ -125,12 +119,27 @@ analyze: analyze_sonar
 .PHONY: analyze_sonar
 analyze_sonar: package
 	[ -z "$(SONAR_AUTH_TOKEN)" ] || \
-	$(DOCKER_MVN) sonar:sonar \
-			-Dsonar.projectKey=$(ORGANIZATION)_$(REPO):$(SAFE_BRANCH_NAME) \
-			-Dsonar.projectName="$(ORGANIZATION)/$(REPO) $(SAFE_BRANCH_NAME)" \
-			-Dsonar.projectVersion=$(VERSION) \
-			-Dsonar.host.url=$(SONAR_HOST_URL) \
-			-Dsonar.login=$(SONAR_AUTH_TOKEN)
+		if [ -z "$(CHANGE_BRANCH)" ]; then \
+			$(DOCKER_MVN) package sonar:sonar \
+					-Dsonar.organization=$(ORGANIZATION) \
+					-Dsonar.projectKey=$(ORGANIZATION)_$(REPO) \
+					-Dsonar.projectName="$(ORGANIZATION)/$(REPO)" \
+					-Dsonar.branch.name=$(BRANCH_NAME) \
+					-Dsonar.projectVersion=$(VERSION) \
+					-Dsonar.host.url=$(SONAR_HOST_URL) \
+					-Dsonar.login=$(SONAR_AUTH_TOKEN) ; \
+		else \
+			$(DOCKER_MVN) package sonar:sonar \
+					-Dsonar.organization=$(ORGANIZATION) \
+					-Dsonar.projectKey=$(ORGANIZATION)_$(REPO) \
+					-Dsonar.projectName="$(ORGANIZATION)/$(REPO)" \
+					-Dsonar.pullrequest.key=$(PR_KEY) \
+					-Dsonar.pullrequest.branch=$(CHANGE_BRANCH) \
+					-Dsonar.pullrequest.base=$(CHANGE_TARGET) \
+					-Dsonar.projectVersion=$(VERSION) \
+					-Dsonar.host.url=$(SONAR_HOST_URL) \
+					-Dsonar.login=$(SONAR_AUTH_TOKEN) ; \
+		fi
 
 .PHONY: clean
 clean: clean_dirs clean_test_public_ibft

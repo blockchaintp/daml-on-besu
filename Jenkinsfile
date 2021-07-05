@@ -83,7 +83,7 @@ pipeline {
 
     stage("Analyze") {
       steps {
-        withSonarQubeEnv('sonarqube') {
+        withSonarQubeEnv('sonarcloud') {
           configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
             sh '''
               make clean analyze
