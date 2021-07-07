@@ -65,24 +65,29 @@ MAVEN_DEPLOY_TARGET = \
 ##
 DOCKER_RUN = docker run --rm
 DOCKER_RUN_USER = $(DOCKER_RUN) --user $(UID):$(GID)
+DOCKER_RUN_ROOT = $(DOCKER_RUN) --user 0:0
 DOCKER_RUN_DEFAULT = $(DOCKER_RUN)
 DOCKER_SOCK ?= /var/run/docker.sock
 
 #TOOLCHAIN_IMAGE = toolchain:$(ISOLATION_ID)
 TOOLCHAIN_IMAGE := blockchaintp/toolchain:latest
+TOOLCHAIN_HOME := /home/toolchain
 
 TOOL_VOLS = -v toolchain-home-$(ISOLATION_ID):/home/toolchain \
 	-v $(PWD):/project
 
-TOOL = $(DOCKER_RUN) $(TOOL_VOLS) -w $${WORKDIR:-/project}
+TOOL = $(DOCKER_RUN_USER) -e MAVEN_HOME=/home/toolchain/.m2 $(TOOL_VOLS) -w $${WORKDIR:-/project}
 
 TOOLCHAIN := $(TOOL) \
 	$(shell if [ -n "$(MAVEN_SETTINGS)" ]; then echo -v \
-	$(MAVEN_SETTINGS):/root/.m2/settings.xml; fi) $(TOOLCHAIN_IMAGE)
+	$(MAVEN_SETTINGS):$(TOOLCHAIN_HOME)/.m2/settings.xml; fi) $(TOOLCHAIN_IMAGE)
 DOCKER_MVN := $(TOOLCHAIN) mvn -Drevision=$(MAVEN_REVISION) -B
-BUSYBOX := $(DOCKER_RUN) $(TOOL_VOLS) \
+BUSYBOX := $(DOCKER_RUN_USER) $(TOOL_VOLS) \
 	$(shell if [ -n "$(MAVEN_SETTINGS)" ]; then echo -v \
-	$(MAVEN_SETTINGS):/root/.m2/settings.xml; fi) busybox:latest
+	$(MAVEN_SETTINGS):$(TOOLCHAIN_HOME)/.m2/settings.xml; fi) busybox:latest
+BUSYBOX_ROOT := $(DOCKER_RUN_ROOT) $(TOOL_VOLS) \
+	$(shell if [ -n "$(MAVEN_SETTINGS)" ]; then echo -v \
+	$(MAVEN_SETTINGS):$(TOOLCHAIN_HOME)/.m2/settings.xml; fi) busybox:latest
 
 DIVE_ANALYZE = $(TOOL) -v $(DOCKER_SOCK):/var/run/docker.sock \
 	--user toolchain:$(shell getent group docker|awk -F: '{print $$3}') \
@@ -199,7 +204,7 @@ analyze_sonar_mvn: $(MARKERS)/build_toolchain_docker
 analyze_sonar_generic:
 	[ -z "$(SONAR_AUTH_TOKEN)" ] || \
 	  if [ -z "$(CHANGE_BRANCH)" ]; then \
-	    $(DOCKER_RUN) \
+	    $(DOCKER_RUN_USER) \
 	      -v $$(pwd):/usr/src \
 	      sonarsource/sonar-scanner-cli \
 	        -Dsonar.organization=$(ORGANIZATION) \
@@ -211,7 +216,7 @@ analyze_sonar_generic:
 	        -Dsonar.login=$(SONAR_AUTH_TOKEN) \
 	        -Dsonar.junit.reportPaths=**/target/surefire-reports; \
 	  else \
-	    $(DOCKER_RUN) \
+	    $(DOCKER_RUN_USER) \
 	      -v $$(pwd):/usr/src \
 	      sonarsource/sonar-scanner-cli \
 	        -Dsonar.organization=$(ORGANIZATION) \
@@ -230,7 +235,7 @@ analyze_sonar_generic:
 analyze_sonar_js:
 	[ -z "$(SONAR_AUTH_TOKEN)" ] || \
 	  if [ -z "$(CHANGE_BRANCH)" ]; then \
-	    $(DOCKER_RUN) \
+	    $(DOCKER_RUN_USER) \
 	      -v $$(pwd):/usr/src \
 	      sonarsource/sonar-scanner-cli \
 	        -Dsonar.organization=$(ORGANIZATION) \
@@ -245,7 +250,7 @@ analyze_sonar_js:
 	        -Dsonar.junit.reportPaths=build/junit.xml \
 	        -Dsonar.javascript.lcov.reportPaths=build/lcov.info; \
 	  else \
-	    $(DOCKER_RUN) \
+	    $(DOCKER_RUN_USER) \
 	      -v $$(pwd):/usr/src \
 	      sonarsource/sonar-scanner-cli \
 	        -Dsonar.organization=$(ORGANIZATION) \
@@ -278,6 +283,7 @@ build/$(REPO)-$(VERSION).tgz:
 
 $(MARKERS)/toolchain_vols:
 	docker volume create toolchain-home-$(ISOLATION_ID)
+	$(BUSYBOX_ROOT) chown -R $(UID):$(GID) $(TOOLCHAIN_HOME)
 	touch $@
 
 $(MARKERS)/build_toolchain_docker: $(MARKERS) $(MARKERS)/toolchain_vols
@@ -298,8 +304,8 @@ clean_toolchain_docker:
 
 .PHONY: fix_permissions
 fix_permissions:
-	$(BUSYBOX) chown -R $(UID):$(GID) /root/.m2/repository || true
-	$(BUSYBOX) chown -R $(UID):$(GID) /project || true
+	$(BUSYBOX_ROOT) chown -R $(UID):$(GID) $(TOOLCHAIN_HOME)/.m2/repository || true
+	$(BUSYBOX_ROOT) chown -R $(UID):$(GID) /project || true
 
 # This will reset the build status possible causing steps to rerun
 .PHONY: clean_markers
@@ -336,9 +342,15 @@ $(MARKERS)/test_go: $(MARKERS)/build_toolchain_docker
 	touch $@
 
 $(MARKERS)/publish_mvn: $(MARKERS)/build_toolchain_docker
+	echo $(DOCKER_MVN) clean deploy -DupdateReleaseInfo=$(MAVEN_UPDATE_RELEASE_INFO) \
+	  -DaltDeploymentRepository=$(MAVEN_DEPLOY_TARGET)
 	$(DOCKER_MVN) -Drevision=0.0.0 versions:set -DnewVersion=$(MAVEN_REVISION)
 	$(DOCKER_MVN) clean deploy -DupdateReleaseInfo=$(MAVEN_UPDATE_RELEASE_INFO) \
 	  -DaltDeploymentRepository=$(MAVEN_DEPLOY_TARGET)
+
+.PHONY: effective-pom
+effective-pom: $(MARKERS)/build_toolchain_docker
+	$(DOCKER_MVN) help:effective-pom
 
 # Any prerequisite directories, which should also be gitignored
 $(MARKERS):
