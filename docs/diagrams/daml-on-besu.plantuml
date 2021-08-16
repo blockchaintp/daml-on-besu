@@ -1,0 +1,74 @@
+@startuml daml-on-besu
+
+' Kubernetes
+!define KubernetesPuml https://raw.githubusercontent.com/dcasati/kubernetes-PlantUML/master/dist
+
+!include KubernetesPuml/kubernetes_Common.puml
+!include KubernetesPuml/kubernetes_Context.puml
+
+!include KubernetesPuml/OSS/KubernetesDeploy.puml
+!include KubernetesPuml/OSS/KubernetesSts.puml
+!include KubernetesPuml/OSS/KubernetesSvc.puml
+!include KubernetesPuml/OSS/KubernetesPvc.puml
+!include KubernetesPuml/OSS/KubernetesPod.puml
+!include KubernetesPuml/OSS/KubernetesCm.puml
+!include KubernetesPuml/OSS/KubernetesJob.puml
+
+
+Namespace_Boundary(daml,"daml") {
+  KubernetesSts(damlrpc, "daml-rpc", "provides the particiant ledger api")
+
+  KubernetesSts(besu, "besu", "4 nodes") {
+    KubernetesPod(besu0,"besu-0","")
+    KubernetesPod(besu1,"besu-1","")
+    KubernetesPod(besu2,"besu-2","")
+    KubernetesPod(besu3,"besu-3","")
+  }
+
+  KubernetesSvc(besusvc, "besu", "all nodes")
+  KubernetesSvc(besusvc0, "enode besu-0", "besu-0")
+  KubernetesSvc(besusvc1, "enode besu-1", "besu-1")
+  KubernetesSvc(besusvc2, "enode besu-2", "besu-2")
+  KubernetesSvc(besusvc3, "enode besu-3", "besu-3")
+  KubernetesPvc(besu0pvc, "volume besu-0", "besu-0")
+  KubernetesPvc(besu1pvc, "volume besu-1", "besu-1")
+  KubernetesPvc(besu2pvc, "volume besu-2", "besu-2")
+  KubernetesPvc(besu3pvc, "volume besu-3", "besu-3")
+
+  besusvc --> besu
+  besusvc0 --> besu0
+  besusvc1 --> besu1
+  besusvc2 --> besu2
+  besusvc3 --> besu3
+  damlrpc --> besusvc
+
+  besu0 --> besu0pvc
+  besu1 --> besu1pvc
+  besu2 --> besu2pvc
+  besu3 --> besu3pvc
+
+  KubernetesSvc(damlgrpc,"grpc","tcp:39000")
+  KubernetesSvc(damljsonapi,"jsonapi","http:8080")
+  damlgrpc --> damlrpc
+  damljsonapi --> damlrpc
+
+  KubernetesCm(genesiscm, "genesis ConfigMap", "")
+  besu0 -l-> genesiscm: uses
+  besu1 -l-> genesiscm: uses
+  besu2 -l-> genesiscm: uses
+  besu3 -l-> genesiscm: uses
+
+  KubernetesJob(initjob,"Initialization job","")
+  initjob --> genesiscm: produces
+
+}
+
+KubernetesSvc(jwksProvider, "JWKS Provider","")
+damlrpc --> jwksProvider
+
+actor actor
+actor --> damlgrpc: <<jwt>>
+actor --> damljsonapi: <<jwt>>
+actor --> jwksProvider: <<jwt>>
+
+@enduml
