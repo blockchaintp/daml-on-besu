@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Unreleased
+
+* docs: add top level index.md [view commit](https://github.com/blockchaintp/daml-on-besu/commit/21bd4d36d845748e0cccae74bfb36bec48166bfa)
+* docs: add basic deployment diagram [view commit](https://github.com/blockchaintp/daml-on-besu/commit/e836af130915f4e8204d04a14322e52531c91ece)
+
 ## v1.4.7
 
 * Log derserialisation can throw [view commit](https://github.com/blockchaintp/daml-on-besu/commit/dcfc6819b4835ed41acea850c751cb7d0495ca5e)
