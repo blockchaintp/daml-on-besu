@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* docs: add readthedocs config [view commit](https://github.com/blockchaintp/daml-on-besu/commit/9cc8edf7e768e990f2e4941a0d6c139d0edb3dd9)
 * docs: add top level index.md [view commit](https://github.com/blockchaintp/daml-on-besu/commit/21bd4d36d845748e0cccae74bfb36bec48166bfa)
 * docs: add basic deployment diagram [view commit](https://github.com/blockchaintp/daml-on-besu/commit/e836af130915f4e8204d04a14322e52531c91ece)
 
