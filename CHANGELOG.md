@@ -8,10 +8,10 @@
 
 ## v1.4.7
 
-* Log derserialisation can throw [view commit](https://github.com/blockchaintp/daml-on-besu/commit/dcfc6819b4835ed41acea850c751cb7d0495ca5e)
 
 ## v1.4.5
 
+* Log derserialisation can throw [view commit](https://github.com/blockchaintp/daml-on-besu/commit/dcfc6819b4835ed41acea850c751cb7d0495ca5e)
 * fix: adjust visibility of methods on Web3Utils [view commit](https://github.com/blockchaintp/daml-on-besu/commit/2ddfc1578a5858e1d56b50b3b94168d718685ea4)
 * refactor: clean up sonar detected code smell [view commit](https://github.com/blockchaintp/daml-on-besu/commit/c852049db5fddaadd7e467059e34f8e21563ee88)
 * fix: remove generic exceptions in favor of project specific ones [view commit](https://github.com/blockchaintp/daml-on-besu/commit/8c286971f11fd07752d9a9c394fe69a7807761bc)
