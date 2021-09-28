@@ -19,8 +19,6 @@
 pipeline {
   agent { node { label 'worker' } }
 
-  triggers {cron('H H * * *')}
-
   options {
     ansiColor('xterm')
     timestamps()
@@ -98,7 +96,6 @@ pipeline {
             '''
           }
         }
-        waitForQualityGate abortPipeline: true
       }
     }
 
