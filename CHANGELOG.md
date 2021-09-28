@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* build(deps): Bump jackson-databind from 2.10.3 to 2.10.5.1 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/9cd253c7ed814502473db07b49a3c8f61ef58e17)
+* build(deps): Bump junit from 4.12 to 4.13.1 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/faebaec29e3035b8c36c3345b13af5c76023f2de)
 * docs: add readthedocs config [view commit](https://github.com/blockchaintp/daml-on-besu/commit/9cc8edf7e768e990f2e4941a0d6c139d0edb3dd9)
 * docs: add top level index.md [view commit](https://github.com/blockchaintp/daml-on-besu/commit/21bd4d36d845748e0cccae74bfb36bec48166bfa)
 * docs: add basic deployment diagram [view commit](https://github.com/blockchaintp/daml-on-besu/commit/e836af130915f4e8204d04a14322e52531c91ece)
