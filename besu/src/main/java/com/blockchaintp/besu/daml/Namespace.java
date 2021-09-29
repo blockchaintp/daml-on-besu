@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Blockchain Technology Partners.
+ * Copyright 2020-2021 Blockchain Technology Partners
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -10,12 +10,12 @@
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
- *
- * SPDX-License-Identifier: Apache-2.0
  */
 package com.blockchaintp.besu.daml;
 
 import java.math.BigInteger;
+
+import com.daml.ledger.participant.state.kvutils.Raw;
 import com.google.protobuf.ByteString;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -26,8 +26,8 @@ import org.hyperledger.besu.ethereum.core.Address;
 /** Utility class dealing with DAML namespace functions and values. */
 public final class Namespace {
   /**
-   * An ethereum address is 20 bytes represented as a hexadecimal string with a "0x" prefix, hence
-   * 42 characters in length.
+   * An ethereum address is 20 bytes represented as a hexadecimal string with a "0x" prefix, hence 42
+   * characters in length.
    */
   public static final int ADDRESS_STRING_LENGTH = Address.SIZE * 2;
 
@@ -37,13 +37,10 @@ public final class Namespace {
   public static final int STORAGE_SLOT_SIZE = Bytes32.SIZE;
 
   /** The ethereum address of the DAML precompiled contract. */
-  public static final String DAML_PUBLIC_ADDRESS =
-      String.format("%02x", Address.DAML_PUBLIC.toBigInteger());
-
+  public static final String DAML_PUBLIC_ADDRESS = String.format("%02x", Address.DAML_PUBLIC.toBigInteger());
 
   /**
-   * Enumeration that maps a DAML key type to a 4-hexadecimal-character ethereum storage root
-   * address.
+   * Enumeration that maps a DAML key type to a 4-hexadecimal-character ethereum storage root address.
    */
   public enum DamlKeyType {
     /** DAML state value. */
@@ -85,8 +82,10 @@ public final class Namespace {
   /**
    * Return a 256-bit ethereum storage address given a DAML storage key and data.
    *
-   * @param key  the DAML storage key
-   * @param data the data
+   * @param key
+   *          the DAML storage key
+   * @param data
+   *          the data
    * @return 256-bit ethereum storage slot address
    */
   public static UInt256 makeAddress(final DamlKeyType key, final byte[] data) {
@@ -101,28 +100,32 @@ public final class Namespace {
   /**
    * Return a 256-bit ethereum storage address given a DAML storage key and data.
    *
-   * @param key  the DAML storage key
-   * @param data the data
+   * @param key
+   *          the DAML storage key
+   * @param data
+   *          the data
    * @return 256-bit ethereum storage slot address
    */
-  public static UInt256 makeAddress(final DamlKeyType key, final ByteString data) {
-    return makeAddress(key, data.toByteArray());
+  public static UInt256 makeAddress(final DamlKeyType key, final Raw.StateKey data) {
+    return makeAddress(key, data.bytes().toByteArray());
   }
 
   /**
    * Return a 256-bit ethereum storage address given a DAL state key.
    *
-   * @param key DamlStateKey to be used for the address
+   * @param key
+   *          DamlStateKey to be used for the address
    * @return the string address
    */
-  public static UInt256 makeDamlStateKeyAddress(final ByteString key) {
+  public static UInt256 makeDamlStateKeyAddress(final Raw.StateKey key) {
     return makeAddress(DamlKeyType.STATE, key);
   }
 
   /**
    * Return the SHA-256 hash of an array of bytes of arbitrary length.
    *
-   * @param input the byte array
+   * @param input
+   *          the byte array
    * @return the SHA-256 hash of the byte array
    */
   public static Bytes getHash(final byte[] input) {
@@ -132,7 +135,8 @@ public final class Namespace {
   /**
    * Return the 64-character hexadecimal string representation of a SHA-256 hash.
    *
-   * @param input the hash
+   * @param hash
+   *          the hash
    * @return the hexadecimal string representation of the hash
    */
   private static String hashToHexString(final Bytes hash) {

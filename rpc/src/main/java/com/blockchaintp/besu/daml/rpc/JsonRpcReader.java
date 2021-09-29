@@ -1,3 +1,16 @@
+/*
+ * Copyright 2021 Blockchain Technology Partners
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.blockchaintp.besu.daml.rpc;
 
 import java.util.ArrayList;
@@ -6,6 +19,7 @@ import java.util.List;
 import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
 import com.daml.ledger.participant.state.kvutils.OffsetBuilder;
+import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.LedgerReader;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.v1.Offset;
@@ -54,7 +68,8 @@ public class JsonRpcReader extends AbstractJsonRpcReader<LedgerRecord> implement
     final DamlLogEvent event = DamlLogEvent.parseFrom(Utils.hexToBytes(log.getData()));
     if (!event.hasTimeUpdate()) {
       final Offset ko = OffsetBuilder.fromLong(blockNum, (int) suboffset, 0);
-      final LedgerRecord lr = new LedgerRecord(ko, event.getLogEntryId(), event.getLogEntry());
+      final LedgerRecord lr = new LedgerRecord(ko, Raw.LogEntryId$.MODULE$.apply(event.getLogEntryId()),
+          Raw.Envelope$.MODULE$.apply(event.getLogEntry()));
       return List.of(lr);
     }
     return List.of();
