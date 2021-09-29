@@ -34,8 +34,8 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0xB1998361
 # ------------------------------------------------------------------------------
 FROM ubuntu-zulu
 
-ARG DAML_SDK_VERSION=1.4.0
-ARG DAML_REPO_VERSION=1.4.0
+ARG DAML_SDK_VERSION=1.13.1
+ARG DAML_REPO_VERSION=1.13.1
 
 RUN apt-get update -y && \
   apt-get install -y \
