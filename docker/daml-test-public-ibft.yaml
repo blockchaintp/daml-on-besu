@@ -248,8 +248,8 @@ services:
         fi
         java -jar ledger-api-test-tool.jar \
         $$TEST_SPEC \
-        --timeout-scale-factor 10 \
-        --concurrent-test-runs=2 \
+        --timeout-scale-factor 15 \
+        --concurrent-test-runs=1 \
         rpc-0:9000 rpc-1:9000
     depends_on:
       - rpc-0

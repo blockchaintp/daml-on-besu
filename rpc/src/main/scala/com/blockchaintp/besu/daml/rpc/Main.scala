@@ -67,7 +67,7 @@ object Main {
       LogUtils.setRootLogLevel(config.extra.logLevel)
       LogUtils.setLogLevel(classOf[HttpService], Level.INFO.name())
       LogUtils.setLogLevel("org.flywaydb.core.internal", Level.INFO.name())
-      val resourceContext = ResourceContext.apply(ExecutionContext.fromExecutor(Executors.newCachedThreadPool()))
+      val resourceContext = ResourceContext.apply(ExecutionContext.fromExecutor(Executors.newCachedThreadPool()));
       for {
         readerWriter <- owner(config, participantConfig, engine)(materializer, logCtx, resourceContext)
       } yield new KeyValueParticipantState(
