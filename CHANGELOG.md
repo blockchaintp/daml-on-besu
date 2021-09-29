@@ -1,7 +1,8 @@
 # CHANGELOG
 
-## Unreleased
+## v1.4.8
 
+* build(deps): Bump log4j-core from 2.13.0 to 2.13.2 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/3185806d8ac0dec5f3473e1585c0e7326194d236)
 * build(deps): Bump jackson-databind from 2.10.3 to 2.10.5.1 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/9cd253c7ed814502473db07b49a3c8f61ef58e17)
 * build(deps): Bump junit from 4.12 to 4.13.1 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/faebaec29e3035b8c36c3345b13af5c76023f2de)
 * docs: add readthedocs config [view commit](https://github.com/blockchaintp/daml-on-besu/commit/9cc8edf7e768e990f2e4941a0d6c139d0edb3dd9)
@@ -11,7 +12,7 @@
 ## v1.4.7
 
 
-## v1.4.5
+## stopBuild/v1.4.5
 
 * Log derserialisation can throw [view commit](https://github.com/blockchaintp/daml-on-besu/commit/dcfc6819b4835ed41acea850c751cb7d0495ca5e)
 * fix: adjust visibility of methods on Web3Utils [view commit](https://github.com/blockchaintp/daml-on-besu/commit/2ddfc1578a5858e1d56b50b3b94168d718685ea4)
