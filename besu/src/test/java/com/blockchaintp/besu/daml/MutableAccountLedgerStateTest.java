@@ -90,7 +90,7 @@ public class MutableAccountLedgerStateTest {
     System.out.println(dsValue.toByteString().toStringUtf8());
     assertTrue("retVal.length != dsValue.length",
         retVal.bytes().toStringUtf8().length() == dsValue.toByteString().toStringUtf8().length());
-    assertTrue(dsValue.toByteString().equals(retVal));
+    assertTrue(dsValue.toByteString().equals(retVal.bytes()));
 
     byte[] zeroBytes = new byte[128];
     ByteString zeroBs = ByteString.copyFrom(zeroBytes);
