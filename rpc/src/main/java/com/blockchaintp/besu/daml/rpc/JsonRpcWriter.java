@@ -23,30 +23,28 @@ import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.CommitMetadata;
 import com.daml.ledger.participant.state.kvutils.api.LedgerWriter;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
-import com.daml.lf.transaction.Transaction;
 import com.daml.telemetry.TelemetryContext;
 import com.google.protobuf.ByteString;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 
-public class JsonRpcWriter implements LedgerWriter {
+/**
+ * Submits to a remote submission service.
+ */
+public final class JsonRpcWriter implements LedgerWriter {
 
   private static final Logger LOG = LoggerFactory.getLogger(JsonRpcWriter.class);
 
+  /**
+   * Public address prefix.
+   */
   public static final String DAML_PUBLIC_ADDRESS = "0x" + String.format("%1$40s", "75").replace(' ', '0');
   private final String participantId;
 
-  private final String jsonRpcUrl;
-
-  private final String privateKey;
-
   private final Submitter<DamlOperation> submitter;
-
-  private final Thread submitterThread;
 
   /**
    * Creates a JsonRpcWriter
@@ -59,12 +57,10 @@ public class JsonRpcWriter implements LedgerWriter {
    *          the private key of the participant
    */
   public JsonRpcWriter(final String configuredParticipantId, final String configuredUrl, final String cfgPrivateKey) {
-    this.privateKey = cfgPrivateKey;
     this.participantId = configuredParticipantId;
-    this.jsonRpcUrl = configuredUrl;
-    this.submitter = new DamlOperationSubmitter(this.jsonRpcUrl, this.privateKey, this.participantId);
-    this.submitterThread = new Thread(submitter);
-    this.submitterThread.start();
+    this.submitter = new DamlOperationSubmitter(configuredUrl, cfgPrivateKey, this.participantId);
+    Thread submitterThread = new Thread(submitter);
+    submitterThread.start();
   }
 
   @Override

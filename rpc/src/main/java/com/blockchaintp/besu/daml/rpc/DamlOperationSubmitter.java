@@ -1,3 +1,16 @@
+/*
+ * Copyright 2021 Blockchain Technology Partners
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.blockchaintp.besu.daml.rpc;
 
 import java.io.IOException;
@@ -17,6 +30,9 @@ import com.blockchaintp.besu.daml.protobuf.DamlOperation;
 import com.blockchaintp.besu.daml.protobuf.DamlOperationBatch;
 import com.blockchaintp.besu.daml.protobuf.TimeKeeperUpdate;
 import com.google.protobuf.util.Timestamps;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,15 +44,11 @@ import org.web3j.protocol.exceptions.ClientConnectionException;
 import org.web3j.protocol.exceptions.TransactionException;
 import org.web3j.tx.response.PollingTransactionReceiptProcessor;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
- * DamlOperation submitter takes DamlOperations off of a queue and assembles
- * them into a batch for sending to the validator.
+ * DamlOperation submitter takes DamlOperations off of a queue and assembles them into a batch for
+ * sending to the validator.
  */
-public class DamlOperationSubmitter implements Submitter<DamlOperation> {
+public final class DamlOperationSubmitter implements Submitter<DamlOperation> {
 
   private static final long MAX_WAIT_MS = 2000L;
 
@@ -61,10 +73,23 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
 
   private final boolean pessimisticNonce;
 
+  /**
+   *
+   * @param jsonRpcUrl
+   * @param privateKey
+   * @param participantId
+   */
   public DamlOperationSubmitter(final String jsonRpcUrl, final String privateKey, final String participantId) {
     this(jsonRpcUrl, privateKey, participantId, false);
   }
 
+  /**
+   *
+   * @param jsonRpcUrl
+   * @param privateKey
+   * @param participantId
+   * @param pessimisticNonce
+   */
   public DamlOperationSubmitter(final String jsonRpcUrl, final String privateKey, final String participantId,
       final boolean pessimisticNonce) {
     this.timeUpdateInterval = Duration.ofSeconds(DEFAULT_TIME_UPDATE_MAX_INTERVAL_SECONDS);
@@ -102,10 +127,10 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
           final DamlOperationBatch.Builder builder = DamlOperationBatch.newBuilder();
           var opsAdded = false;
           var opCounter = 0;
-          while (op != null ) {
+          while (op != null) {
             builder.addOperations(op);
             opCounter++;
-            if (opCounter > MAX_OPS_PER_BATCH){
+            if (opCounter > MAX_OPS_PER_BATCH) {
               break;
             }
             opsAdded = true;
@@ -126,7 +151,7 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
             opsAdded = true;
           } else if (lastInstantUpdate != null) {
             var res = Duration.between(lastInstantUpdate, now);
-            if (res.compareTo(this.timeUpdateInterval) >= 0 ) {
+            if (res.compareTo(this.timeUpdateInterval) >= 0) {
               final DamlOperation tUpdate = sendTimeUpdate(now);
               builder.addOperations(tUpdate);
               opCounter++;
@@ -153,27 +178,27 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
         LOG.warn("Operation submitter thread interrupted", e);
         Thread.currentThread().interrupt();
       } catch (IOException | TransactionException e) {
-        throw new DamlBesuRuntimeException("Unhandled exception, exiting thread",e);
+        throw new DamlBesuRuntimeException("Unhandled exception, exiting thread", e);
       }
     }
   }
 
-  private long waitForSubmissionComplete(Queue<CompletableFuture<EthSendTransaction>> outstandingItem,
-      Queue<DamlOperationBatch> submittedBatches, final DamlOperationBatch txBatch,
+  private long waitForSubmissionComplete(final Queue<CompletableFuture<EthSendTransaction>> outstandingItem,
+      final Queue<DamlOperationBatch> submittedBatches, final DamlOperationBatch txBatch,
       final CompletableFuture<EthSendTransaction> txRespCf)
       throws IOException, TransactionException, JsonProcessingException, JsonMappingException {
     long batchCounter = 0;
-    try  {
+    try {
       final EthSendTransaction txResp = txRespCf.join();
       final String txHash = txResp.getTransactionHash();
       if (this.pessimisticNonce) {
         this.txReceiptProcessor.waitForTransactionReceipt(txHash);
         LOG.info("Sending item complete {}", batchCounter);
       }
-    } catch ( CompletionException ce ) {
+    } catch (CompletionException ce) {
       if (ce.getCause() instanceof ClientConnectionException) {
         Integer errorCode = extractError(ce);
-        if ( NONCE_TOO_LOW.equals(errorCode) ) {
+        if (NONCE_TOO_LOW.equals(errorCode)) {
           LOG.warn("Received nonce too low exception, resubmitted batch {}", batchCounter);
           final Request<?, EthSendTransaction> txRequest = createTxRequest(web3, txBatch);
           submittedBatches.add(txBatch);
@@ -192,11 +217,11 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
     ClientConnectionException cce = (ClientConnectionException) ce.getCause();
     String message = cce.getMessage();
 
-    String jsonPayload = message.substring(message.indexOf(';')+2);
+    String jsonPayload = message.substring(message.indexOf(';') + 2);
     HashMap<String, Object> errorMap = new ObjectMapper().readValue(jsonPayload, HashMap.class);
     if (errorMap.containsKey("error")) {
-      HashMap<String,Object> error = (HashMap<String, Object>) errorMap.get("error");
-      return Integer.parseInt(error.getOrDefault("code","0").toString());
+      HashMap<String, Object> error = (HashMap<String, Object>) errorMap.get("error");
+      return Integer.parseInt(error.getOrDefault("code", "0").toString());
     }
     return 0;
   }
@@ -204,13 +229,12 @@ public class DamlOperationSubmitter implements Submitter<DamlOperation> {
   private DamlOperation sendTimeUpdate(final Instant now) {
     final com.google.protobuf.Timestamp nowMillis = Timestamps.fromMillis(now.toEpochMilli());
     final TimeKeeperUpdate tkUpdate = TimeKeeperUpdate.newBuilder().setTimeUpdate(nowMillis).build();
-    return DamlOperation.newBuilder().setSubmittingParticipant(participantId)
-        .setTimeUpdate(tkUpdate).build();
+    return DamlOperation.newBuilder().setSubmittingParticipant(participantId).setTimeUpdate(tkUpdate).build();
   }
 
   @SuppressWarnings("java:S1452")
-  protected Request<?, EthSendTransaction> createTxRequest(final Web3j web3, final DamlOperationBatch batch) {
-    final Web3Utils utils = new Web3Utils(web3);
+  protected Request<?, EthSendTransaction> createTxRequest(final Web3j web3Inner, final DamlOperationBatch batch) {
+    final Web3Utils utils = new Web3Utils(web3Inner);
     return utils.sendBytes(getCredentials(), JsonRpcWriter.DAML_PUBLIC_ADDRESS, batch.toByteArray());
   }
 

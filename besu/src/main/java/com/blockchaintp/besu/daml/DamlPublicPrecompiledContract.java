@@ -41,7 +41,7 @@ public final class DamlPublicPrecompiledContract extends DamlPrecompiledContract
 
   private static final String CONTRACT_NAME = "DamlPublic";
 
-  private ExecutionContext ec;
+  private final ExecutionContext ec;
 
   public DamlPublicPrecompiledContract(final GasCalculator gasCalculator) {
     super(CONTRACT_NAME, gasCalculator);

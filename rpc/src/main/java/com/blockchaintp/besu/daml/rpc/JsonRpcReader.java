@@ -33,16 +33,24 @@ import org.web3j.protocol.core.methods.response.Log;
 
 import io.reactivex.processors.UnicastProcessor;
 
+/**
+ *
+ */
 public class JsonRpcReader extends AbstractJsonRpcReader<LedgerRecord> implements LedgerReader {
 
   private static final Logger LOG = LoggerFactory.getLogger(JsonRpcReader.class);
 
+  /**
+   *
+   * @param rpcUrl
+   * @param configuredLedgerId
+   */
   public JsonRpcReader(final String rpcUrl, final String configuredLedgerId) {
     super(rpcUrl, configuredLedgerId, null);
   }
 
   @SuppressWarnings("rawtypes")
-  protected final void handleEthLogs(List<LogResult> logs, UnicastProcessor<LedgerRecord> processor) {
+  protected final void handleEthLogs(final List<LogResult> logs, final UnicastProcessor<LedgerRecord> processor) {
     long logInBlockCtr = 0L;
     final List<LedgerRecord> updates = new ArrayList<>();
     for (final LogResult lr : logs) {

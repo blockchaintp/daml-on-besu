@@ -16,7 +16,6 @@ package com.blockchaintp.besu.daml;
 import java.math.BigInteger;
 
 import com.daml.ledger.participant.state.kvutils.Raw;
-import com.google.protobuf.ByteString;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
@@ -52,7 +51,7 @@ public final class Namespace {
 
     private final String rootAddress;
 
-    private DamlKeyType() {
+    DamlKeyType() {
       rootAddress = String.format("%s%02d", DAML_PUBLIC_ADDRESS, ordinal());
     }
 
@@ -66,7 +65,11 @@ public final class Namespace {
     }
   }
 
-  public static final UInt256 getGlobalTimeAddress() {
+  /**
+   *
+   * @return The global time address.
+   */
+  public static UInt256 getGlobalTimeAddress() {
     return Namespace.makeAddress(DamlKeyType.TIME_UPDATE, "GLOBAL".getBytes());
   }
 

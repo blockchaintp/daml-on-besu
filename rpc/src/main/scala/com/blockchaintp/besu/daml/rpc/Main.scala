@@ -29,11 +29,13 @@ import com.daml.ledger.participant.state.kvutils.app.ParticipantConfig
 import com.daml.ledger.participant.state.kvutils.app.Runner
 import com.daml.ledger.participant.state.v1.Configuration
 import com.daml.ledger.participant.state.v1.TimeModel
-import com.daml.ledger.resources.{ResourceContext, ResourceOwner}
+import com.daml.ledger.resources.ResourceContext
+import com.daml.ledger.resources.ResourceOwner
 import com.daml.lf.engine.Engine
 import com.daml.logging.LoggingContext
 import com.daml.platform.configuration.LedgerConfiguration
-import com.daml.resources.{FutureResourceOwner, ProgramResource}
+import com.daml.resources.FutureResourceOwner
+import com.daml.resources.ProgramResource
 import org.slf4j.event.Level
 import org.web3j.protocol.http.HttpService
 
@@ -41,7 +43,8 @@ import scala.util.Try
 import scopt.OptionParser
 
 import java.util.concurrent.Executors
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 object Main {
 
@@ -66,7 +69,7 @@ object Main {
       LogUtils.setLogLevel("org.flywaydb.core.internal", Level.INFO.name())
       val resourceContext = ResourceContext.apply(ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor()))
       for {
-        readerWriter <- owner(config, participantConfig, engine)(materializer,logCtx,resourceContext)
+        readerWriter <- owner(config, participantConfig, engine)(materializer, logCtx, resourceContext)
       } yield new KeyValueParticipantState(
         readerWriter,
         readerWriter,
@@ -79,9 +82,16 @@ object Main {
         logCtx: LoggingContext,
         context: ResourceContext
     ): ResourceOwner[KeyValueLedger] = {
-      new FutureResourceOwner(() => Future.successful(
-        new JsonRpcReaderWriter(participantConfig.participantId, config.extra.privateKeyFile, config.extra.jsonRpcUrl, config.ledgerId)
-      ))
+      new FutureResourceOwner(() =>
+        Future.successful(
+          new JsonRpcReaderWriter(
+            participantConfig.participantId,
+            config.extra.privateKeyFile,
+            config.extra.jsonRpcUrl,
+            config.ledgerId
+          )
+        )
+      )
     }
 
     override def ledgerConfig(config: Config[ExtraConfig]): LedgerConfiguration =

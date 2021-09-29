@@ -60,7 +60,10 @@ import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 import scala.runtime.BoxedUnit;
 
-public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
+/**
+ *
+ */
+public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
   private static final Logger LOG = LogManager.getLogger();
 
   private static final LogTopic DAML_LOG_TOPIC = LogTopic
@@ -70,6 +73,10 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
 
   private final MessageFrame messageFrame;
 
+  /**
+   *
+   * @param theMessageFrame
+   */
   public MutableAccountLedgerState(final MessageFrame theMessageFrame) {
     final WorldUpdater updater = theMessageFrame.getWorldState();
     this.account = updater.getOrCreate(Address.DAML_PUBLIC).getMutable();
@@ -105,7 +112,7 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
     return states;
   }
 
-  @SuppressWarnings({ "java:S1612" })
+  @SuppressWarnings({ "java:S1612", "checkstyle:MagicNumber" })
   private ByteBuffer getLedgerEntry(final UInt256 key) {
     // reconstitute RLP bytes from all ethereum slices created for this ledger
     // entry
@@ -142,11 +149,10 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
       deadBeef = data.toHexString();
       if (deadBeef.contains("00dead")) {
         dataSoFar.add(fromDeadBeef(data));
-        unaltered.add(data.toBytes());
       } else {
         dataSoFar.add(data.toMinimalBytes());
-        unaltered.add(data.toBytes());
       }
+      unaltered.add(data.toBytes());
     }
     rawRlp = Bytes.concatenate(dataSoFar.toArray(new Bytes[] {}));
     if (LOG.isDebugEnabled()) {
@@ -175,7 +181,7 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
     return UInt256.fromHexString(deadBeef);
   }
 
-  private UInt256 maybeMakeDeadBeef(Bytes data) {
+  private UInt256 maybeMakeDeadBeef(final Bytes data) {
     UInt256 part = UInt256.fromBytes(data);
     if (data.size() > 0 && part.isZero()) {
       return makeDeadBeef(data.size());
@@ -204,7 +210,7 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
    * @param entry
    *          value to store in the ledger
    */
-  @SuppressWarnings("java:S1612")
+  @SuppressWarnings({ "java:S1612", "checkstyle:MagicNumber" })
   private void addLedgerEntry(final UInt256 rootAddress, final Raw.Envelope entry) {
     // RLP-encode the entry
     final Bytes encoded = RLP.encodeOne(Bytes.of(entry.bytes().toByteArray()));
@@ -283,6 +289,15 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
     return sendLogEvent(Address.DAML_PUBLIC, DAML_LOG_TOPIC, entryId, entry);
   }
 
+  /**
+   *
+   * @param fromAddress
+   * @param topic
+   * @param entryId
+   * @param entry
+   * @return A log event appended to the current message frame.
+   * @throws InternalError
+   */
   public DamlLogEvent sendLogEvent(final Address fromAddress, final LogTopic topic, final Raw.LogEntryId entryId,
       final Raw.Envelope entry) throws InternalError {
     final DamlLogEvent logEvent = DamlLogEvent.newBuilder().setLogEntry(entry.bytes()).setLogEntryId(entryId.bytes())
@@ -293,6 +308,11 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
     return logEvent;
   }
 
+  /**
+   *
+   * @param timestamp
+   * @return A time event appended to the current message frame.
+   */
   public DamlLogEvent sendTimeEvent(final com.google.protobuf.Timestamp timestamp) {
     final TimeKeeperUpdate update = TimeKeeperUpdate.newBuilder().setTimeUpdate(timestamp).build();
     final DamlLogEvent logEvent = DamlLogEvent.newBuilder().setTimeUpdate(update).build();
@@ -303,6 +323,7 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
     return logEvent;
   }
 
+  @SuppressWarnings("checkstyle:MagicNumber")
   @Override
   public Timestamp getRecordTime() throws InternalError {
     final ByteBuffer globalEntryBB = this.getLedgerEntry(Namespace.getGlobalTimeAddress());
@@ -394,12 +415,12 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
 
   @Override
   public Future<DamlLogEvent> appendToLog(final Raw.LogEntryId key, final Raw.Envelope value,
-      ExecutionContext context) {
+      final ExecutionContext context) {
     return Future.successful(sendLogEvent(key, value));
   }
 
   @Override
-  public Future<Option<Raw.Envelope>> readState(final Raw.StateKey key, ExecutionContext context) {
+  public Future<Option<Raw.Envelope>> readState(final Raw.StateKey key, final ExecutionContext context) {
     final var val = getDamlState(key);
     if (null != val) {
       return Future.successful(Option.apply(val));
@@ -410,15 +431,15 @@ public class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
 
   @Override
   public Future<Seq<Option<Raw.Envelope>>> readState(final Iterable<Raw.StateKey> keys,
-                                                     final ExecutionContext context) {
-    final var keyColl = JavaConverters.<Raw.StateKey>asJavaCollection(keys);
+      final ExecutionContext context) {
+    final var keyColl = JavaConverters.asJavaCollection(keys);
     final var damlStates = getDamlStates(keyColl);
     final var retCollection = new ArrayList<Option<Raw.Envelope>>();
     for (final var k : keyColl) {
       if (damlStates.containsKey(k)) {
         retCollection.add(damlStates.get(k));
       } else {
-        retCollection.add(Option.<Raw.Envelope>empty());
+        retCollection.add(Option.empty());
       }
     }
     return Future.successful(JavaConverters.asScalaIteratorConverter(retCollection.iterator()).asScala().toSeq());
