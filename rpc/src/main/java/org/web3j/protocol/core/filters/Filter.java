@@ -37,7 +37,6 @@ import org.web3j.protocol.exceptions.ClientConnectionException;
 /**
  *
  * Class for creating managed filter requests with callbacks.
- * 
  * @param <T>
  */
 @SuppressWarnings("all")
@@ -46,11 +45,11 @@ public abstract class Filter<T> {
   private static final Logger LOG = LoggerFactory.getLogger(Filter.class);
 
   protected final Web3j web3j;
-  private Callback<T> callback;
+  protected Callback<T> callback;
 
   private volatile BigInteger filterId;
 
-  private ScheduledFuture<?> schedule;
+  protected ScheduledFuture<?> schedule;
 
   private ScheduledExecutorService scheduledExecutorService;
 
@@ -58,7 +57,7 @@ public abstract class Filter<T> {
 
   public Filter(Web3j web3j, Callback<T> callback) {
     this.web3j = web3j;
-    this.setCallback(callback);
+    this.callback = callback;
   }
 
   public void run(ScheduledExecutorService scheduledExecutorService, long blockTime) {
@@ -90,7 +89,7 @@ public abstract class Filter<T> {
        * then be required to recreate subscriptions manually which isn't ideal given the aforementioned
        * issues.
        */
-      setSchedule(scheduledExecutorService.scheduleAtFixedRate(() -> {
+      schedule = scheduledExecutorService.scheduleAtFixedRate(() -> {
         try {
           this.pollFilter(ethFilter);
         } catch (Throwable e) {
@@ -99,7 +98,7 @@ public abstract class Filter<T> {
           // any notification
           LOG.error("Error sending request", e);
         }
-      }, 0, blockTime, TimeUnit.MILLISECONDS));
+      }, 0, blockTime, TimeUnit.MILLISECONDS);
     } catch (IOException e) {
       throwException(e);
     }
@@ -160,12 +159,12 @@ public abstract class Filter<T> {
 
   private void reinstallFilter() {
     LOG.warn("The filter has not been found. Filter id: " + filterId);
-    getSchedule().cancel(true);
+    schedule.cancel(true);
     this.run(scheduledExecutorService, blockTime);
   }
 
   public void cancel() {
-    getSchedule().cancel(false);
+    schedule.cancel(false);
 
     try {
       EthUninstallFilter ethUninstallFilter = uninstallFilter(filterId);
@@ -201,21 +200,5 @@ public abstract class Filter<T> {
 
   void throwException(Throwable cause) {
     throw new FilterException("Error sending request", cause);
-  }
-
-  protected Callback<T> getCallback() {
-    return callback;
-  }
-
-  protected void setCallback(Callback<T> callback) {
-    this.callback = callback;
-  }
-
-  protected ScheduledFuture<?> getSchedule() {
-    return schedule;
-  }
-
-  protected void setSchedule(ScheduledFuture<?> schedule) {
-    this.schedule = schedule;
   }
 }
