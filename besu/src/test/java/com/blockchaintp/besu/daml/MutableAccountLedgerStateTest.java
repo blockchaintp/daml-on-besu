@@ -99,7 +99,7 @@ public class MutableAccountLedgerStateTest {
     state.setDamlState(Raw.StateKey$.MODULE$.apply(zeroKey), Raw.Envelope$.MODULE$.apply(zeroBs));
 
     retVal = state.getDamlState(Raw.StateKey$.MODULE$.apply(zeroKey));
-    assertTrue(retVal.bytes().toByteArray().length == 128);
+    assertEquals(128, retVal.bytes().toByteArray().length);
 
   }
 }
