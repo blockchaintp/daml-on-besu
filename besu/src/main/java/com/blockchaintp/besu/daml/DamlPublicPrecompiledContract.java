@@ -73,8 +73,9 @@ public final class DamlPublicPrecompiledContract extends DamlPrecompiledContract
         .toJava(validateAndCommit);
     try {
       final Either<ValidationFailed, DamlLogEvent> either = validateAndCommitCS.toCompletableFuture().get();
-      if (either.isLeft()) {
-        final var validationFailed = either.left().get();
+      final var left = either.left().toOption();
+      if (!left.isEmpty()) {
+        final var validationFailed = left.get();
         throw new InvalidTransactionException(validationFailed.toString());
       } else {
         LOG.debug("Processed transaction into log event cid={}", correlationId);

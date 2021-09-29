@@ -13,6 +13,7 @@
  */
 package com.blockchaintp.besu.daml;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -88,9 +89,9 @@ public class MutableAccountLedgerStateTest {
     var retVal = state.getDamlState(Raw.StateKey$.MODULE$.apply(dsKey));
     System.out.println(retVal.bytes().toStringUtf8());
     System.out.println(dsValue.toByteString().toStringUtf8());
-    assertTrue("retVal.length != dsValue.length",
-        retVal.bytes().toStringUtf8().length() == dsValue.toByteString().toStringUtf8().length());
-    assertTrue(dsValue.toByteString().equals(retVal.bytes()));
+    assertEquals("retVal.length != dsValue.length",
+        retVal.bytes().toStringUtf8().length(), dsValue.toByteString().toStringUtf8().length());
+    assertEquals(dsValue.toByteString(), retVal.bytes());
 
     byte[] zeroBytes = new byte[128];
     ByteString zeroBs = ByteString.copyFrom(zeroBytes);
