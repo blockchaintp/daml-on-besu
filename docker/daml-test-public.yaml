@@ -108,7 +108,9 @@ services:
         fi
         java -jar ledger-api-test-tool.jar \
         $$TEST_SPEC \
-        --timeout-scale-factor 15 \
+        --verbose \
+        --include CommandDeduplicationIT:CDSimpleDeduplicationCommandClient \
+        --timeout-scale-factor 20 \
         --concurrent-test-runs=1 \
         rpc-0:9000
     depends_on:
