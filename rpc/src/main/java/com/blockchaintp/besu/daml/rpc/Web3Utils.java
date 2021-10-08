@@ -1,3 +1,16 @@
+/*
+ * Copyright 2021 Blockchain Technology Partners
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.blockchaintp.besu.daml.rpc;
 
 import java.io.IOException;
@@ -29,12 +42,16 @@ import org.web3j.protocol.core.methods.response.EthLog.LogResult;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.gas.StaticGasProvider;
 
-public class Web3Utils {
+/**
+ *
+ */
+public final class Web3Utils {
 
   private static final Logger LOG = LoggerFactory.getLogger(Web3Utils.class);
 
   private static final int DEFAULT_WAIT_BEFORE_RETRY_SECONDS = 30;
   private static final int DEFAULT_MAX_RETRIES = -1;
+  public static final int GAS_LIMIT = 3000000;
 
   private int maxRetries;
 
@@ -42,17 +59,21 @@ public class Web3Utils {
 
   private Web3j web3;
 
-  private StaticGasProvider gasProvider;
+  private final StaticGasProvider gasProvider;
 
-  public Web3Utils(final Web3j web3) {
-    setWeb3(web3);
-    this.gasProvider = new StaticGasProvider(BigInteger.ZERO, BigInteger.valueOf(3000000));
+  /**
+   *
+   * @param innerWeb3j
+   */
+  public Web3Utils(final Web3j innerWeb3j) {
+    setWeb3(innerWeb3j);
+    this.gasProvider = new StaticGasProvider(BigInteger.ZERO, BigInteger.valueOf(GAS_LIMIT));
     this.setMaxRetries(DEFAULT_MAX_RETRIES);
     this.setRetryWaitTimeSeconds(DEFAULT_WAIT_BEFORE_RETRY_SECONDS);
   }
 
   protected Web3Utils() {
-    this.gasProvider = new StaticGasProvider(BigInteger.ZERO, BigInteger.valueOf(3000000));
+    this.gasProvider = new StaticGasProvider(BigInteger.ZERO, BigInteger.valueOf(GAS_LIMIT));
     this.setMaxRetries(DEFAULT_MAX_RETRIES);
     this.setRetryWaitTimeSeconds(DEFAULT_WAIT_BEFORE_RETRY_SECONDS);
   }
@@ -61,22 +82,31 @@ public class Web3Utils {
     return maxRetries;
   }
 
-  protected void setMaxRetries(int maxRetries) {
-    this.maxRetries = maxRetries;
+  protected void setMaxRetries(final int theMaxRetries) {
+    this.maxRetries = theMaxRetries;
   }
 
   protected int getRetryWaitTimeSeconds() {
     return retryWaitTimeSeconds;
   }
 
-  protected void setRetryWaitTimeSeconds(int retryWaitTimeSeconds) {
-    this.retryWaitTimeSeconds = retryWaitTimeSeconds;
+  protected void setRetryWaitTimeSeconds(final int theRetryWaitTimeSeconds) {
+    this.retryWaitTimeSeconds = theRetryWaitTimeSeconds;
   }
 
-  protected void setWeb3(final Web3j web3) {
-    this.web3 = web3;
+  protected void setWeb3(final Web3j theWeb3) {
+    this.web3 = theWeb3;
   }
 
+  /**
+   * Retrieve log entries from block and address.
+   * 
+   * @param block
+   * @param address
+   * @param event
+   * @return
+   * @throws IOException
+   */
   @SuppressWarnings("rawtypes")
   public List<LogResult> logsFromBlock(final EthBlock block, final String address, final Event event)
       throws IOException {
@@ -96,16 +126,29 @@ public class Web3Utils {
     return ethlog.getLogs();
   }
 
-  @SuppressWarnings({"java:S1452"})
+  /**
+   *
+   * @param credentials
+   * @param to
+   * @param dataBytes
+   * @return A request to send bytes.
+   */
+  @SuppressWarnings({ "java:S1452" })
   public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to,
       final byte[] dataBytes) {
     final String data = Utils.bytesToHex(dataBytes);
     return sendBytes(credentials, to, data);
-
   }
-  @SuppressWarnings({"java:S1452","java:S2583"})
-  public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to,
-      final String data) {
+
+  /**
+   *
+   * @param credentials
+   * @param to
+   * @param data
+   * @return A request to send the specified transaction.
+   */
+  @SuppressWarnings({ "java:S1452", "java:S2583" })
+  public Request<?, EthSendTransaction> sendBytes(final Credentials credentials, final String to, final String data) {
     int tries = 0;
     RecoverableException lastException = null;
     while (getMaxRetries() < 0 || tries < getMaxRetries()) {
@@ -134,9 +177,17 @@ public class Web3Utils {
     }
   }
 
+  /**
+   *
+   * @param credentials
+   * @param to
+   * @param data
+   * @return A request to send a raw transaction encoded as a string.
+   * @throws RecoverableException
+   */
   @SuppressWarnings("java:S1452")
-  public Request<?, EthSendTransaction> sendEncodedString(Credentials credentials, String to, String data)
-      throws RecoverableException {
+  public Request<?, EthSendTransaction> sendEncodedString(final Credentials credentials, final String to,
+      final String data) throws RecoverableException {
     LOG.debug("Creating transaction");
     final BigInteger gasLimit = getGasLimit(data.getBytes());
     final BigInteger nonce = getNonce(credentials);

@@ -1,3 +1,16 @@
+/*
+ * Copyright 2021 Blockchain Technology Partners
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.blockchaintp.besu.daml.rpc;
 
 import java.nio.ByteBuffer;
@@ -6,7 +19,10 @@ import java.util.Arrays;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.google.protobuf.ByteString;
 
-public class Utils {
+/**
+ *
+ */
+public final class Utils {
   private static final int OFFSET_BYTES = 16;
   private static final int MID_BYTES_START = 8;
   private static final int MID_BYTES_END = 12;
@@ -15,7 +31,12 @@ public class Utils {
   private Utils() {
   }
 
-  public static String bytesToHex(byte[] bytes) {
+  /**
+   * @param bytes
+   * @return Hex encoded representation.
+   */
+  @SuppressWarnings("checkstyle:MagicNumber")
+  public static String bytesToHex(final byte[] bytes) {
     char[] hexChars = new char[bytes.length * 2];
     for (int j = 0; j < bytes.length; j++) {
       int v = bytes[j] & 0xFF;
@@ -25,8 +46,13 @@ public class Utils {
     return new String(hexChars);
   }
 
-  @SuppressWarnings("java:S127")
-  public static byte[] hexToBytes(String strData) {
+  /**
+   *
+   * @param strData
+   * @return Decode hex endoded string to bytes.
+   */
+  @SuppressWarnings({ "java:S127", "checkstyle:MagicNumber" })
+  public static byte[] hexToBytes(final String strData) {
     char[] data;
     if (strData.startsWith("0x")) {
       data = strData.substring(2).toCharArray();
@@ -61,29 +87,35 @@ public class Utils {
     return digit;
   }
 
-  public static Offset toOffset(long... elements) {
+  /**
+   *
+   * @param elements
+   * @return An opaque offset composed from the supplied elements.
+   */
+  public static Offset toOffset(final long... elements) {
     StringBuilder sb = new StringBuilder();
     boolean second = false;
     for (long e : elements) {
       if (second) {
         sb.append("-");
       }
-      sb.append(Long.toString(e));
+      sb.append(e);
       second = true;
     }
     return new Offset(ByteString.copyFromUtf8(sb.toString()));
   }
 
-  public static long[] fromOffset(Offset offset) {
+  /**
+   *
+   * @param offset
+   * @return Offset decomposed into component bytes.
+   */
+  public static long[] fromOffset(final Offset offset) {
     byte[] sourceBytes = offset.toByteArray();
     ByteBuffer highBuf = ByteBuffer.wrap(Arrays.copyOfRange(sourceBytes, 0, MID_BYTES_START));
     ByteBuffer midBuf = ByteBuffer.wrap(Arrays.copyOfRange(sourceBytes, MID_BYTES_START, MID_BYTES_END));
     ByteBuffer lowBuf = ByteBuffer.wrap(Arrays.copyOfRange(sourceBytes, MID_BYTES_END, OFFSET_BYTES));
 
-    return new long[] {
-      highBuf.getLong(),
-      midBuf.getInt(),
-      lowBuf.getInt()
-    };
+    return new long[] { highBuf.getLong(), midBuf.getInt(), lowBuf.getInt() };
   }
 }

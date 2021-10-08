@@ -1,3 +1,16 @@
+/*
+ * Copyright 2021 Blockchain Technology Partners
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.blockchaintp.besu.daml.rpc;
 
 import java.util.UUID;
@@ -6,8 +19,11 @@ import com.blockchaintp.besu.daml.protobuf.DamlOperation;
 import com.blockchaintp.besu.daml.protobuf.DamlTransaction;
 import com.daml.ledger.api.health.HealthStatus;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
+import com.daml.ledger.participant.state.kvutils.Raw;
+import com.daml.ledger.participant.state.kvutils.api.CommitMetadata;
 import com.daml.ledger.participant.state.kvutils.api.LedgerWriter;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
+import com.daml.telemetry.TelemetryContext;
 import com.google.protobuf.ByteString;
 
 import org.slf4j.Logger;
@@ -15,35 +31,36 @@ import org.slf4j.LoggerFactory;
 
 import scala.concurrent.Future;
 
-public class JsonRpcWriter implements LedgerWriter {
+/**
+ * Submits to a remote submission service.
+ */
+public final class JsonRpcWriter implements LedgerWriter {
 
   private static final Logger LOG = LoggerFactory.getLogger(JsonRpcWriter.class);
 
-  public static final String DAML_PUBLIC_ADDRESS =
-      "0x" + String.format("%1$40s", "75").replace(' ', '0');
+  /**
+   * Public address prefix.
+   */
+  public static final String DAML_PUBLIC_ADDRESS = "0x" + String.format("%1$40s", "75").replace(' ', '0');
   private final String participantId;
-
-  private final String jsonRpcUrl;
-
-  private final String privateKey;
 
   private final Submitter<DamlOperation> submitter;
 
-  private final Thread submitterThread;
-
   /**
    * Creates a JsonRpcWriter
-   * @param configuredParticipantId the participantId
-   * @param configuredUrl the url of the besu instance
-   * @param cfgPrivateKey the private key of the participant
+   * 
+   * @param configuredParticipantId
+   *          the participantId
+   * @param configuredUrl
+   *          the url of the besu instance
+   * @param cfgPrivateKey
+   *          the private key of the participant
    */
   public JsonRpcWriter(final String configuredParticipantId, final String configuredUrl, final String cfgPrivateKey) {
-    this.privateKey = cfgPrivateKey;
     this.participantId = configuredParticipantId;
-    this.jsonRpcUrl = configuredUrl;
-    this.submitter = new DamlOperationSubmitter(this.jsonRpcUrl, this.privateKey, this.participantId);
-    this.submitterThread = new Thread(submitter);
-    this.submitterThread.start();
+    this.submitter = new DamlOperationSubmitter(configuredUrl, cfgPrivateKey, this.participantId);
+    Thread submitterThread = new Thread(submitter);
+    submitterThread.start();
   }
 
   @Override
@@ -52,11 +69,12 @@ public class JsonRpcWriter implements LedgerWriter {
   }
 
   @Override
-  public Future<SubmissionResult> commit(final String correlationId, final ByteString envelope) {
-    final DamlTransaction tx =
-        DamlTransaction.newBuilder().setSubmission(envelope).setLogEntryId(newLogEntryId()).build();
-    final DamlOperation operation = DamlOperation.newBuilder().setCorrelationId(correlationId)
-        .setTransaction(tx).setSubmittingParticipant(participantId()).build();
+  public Future<SubmissionResult> commit(final String correlationId, final Raw.Envelope envelope,
+      final CommitMetadata metadata, final TelemetryContext telemetryContext) {
+    final DamlTransaction tx = DamlTransaction.newBuilder().setSubmission(envelope.bytes())
+        .setLogEntryId(newLogEntryId()).build();
+    final DamlOperation operation = DamlOperation.newBuilder().setCorrelationId(correlationId).setTransaction(tx)
+        .setSubmittingParticipant(participantId()).build();
 
     try {
       LOG.debug("Submitting request");
@@ -64,7 +82,8 @@ public class JsonRpcWriter implements LedgerWriter {
     } catch (final InterruptedException e) {
       LOG.warn("JsonRpcWriter interrupted while submitting a request");
       Thread.currentThread().interrupt();
-      return Future.successful(new SubmissionResult.InternalError("JsonRpcWriter interrupted while submitting a request"));
+      return Future
+          .successful(new SubmissionResult.InternalError("JsonRpcWriter interrupted while submitting a request"));
     }
     LOG.debug("Acknowledging Submission");
     return Future.successful(SubmissionResult.Acknowledged$.MODULE$);
@@ -76,7 +95,7 @@ public class JsonRpcWriter implements LedgerWriter {
   }
 
   private ByteString newLogEntryId() {
-    return DamlLogEntryId.newBuilder()
-        .setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build().toByteString();
+    return DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build()
+        .toByteString();
   }
 }

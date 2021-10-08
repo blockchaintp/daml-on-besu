@@ -29,6 +29,11 @@
   <name>${project.groupId}:${project.artifactId}</name>
   <description>Implementation of DAML Ledger API Server with a Besu backend</description>
 
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <scala.lang.version>2.13</scala.lang.version>
+  </properties>
+
   <dependencies>
     <!-- Cross project -->
     <dependency>
@@ -40,6 +45,10 @@
       <groupId>daml-on-besu</groupId>
       <artifactId>common</artifactId>
       <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.tuweni</groupId>
