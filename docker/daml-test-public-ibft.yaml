@@ -1,3 +1,4 @@
+# yamllint disable rule:line-length
 ---
 # Copyright 2020 Blockchain Technology Partners
 #
@@ -12,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 version: "2.1"
 
 services:
@@ -252,7 +252,6 @@ services:
         --include CommandDeduplicationIT:CDSimpleDeduplicationCommandClient \
         --include CommandDeduplicationIT:CDSimpleDeduplicationCommandClient \
         --verbose \
-        --concurrent-test-runs=1 \
         rpc-0:9000 rpc-1:9000
         java -jar ledger-api-test-tool.jar \
         $$TEST_SPEC \
@@ -260,7 +259,6 @@ services:
         --exclude CommandDeduplicationIT:CDSimpleDeduplicationBasic \
         --exclude CommandDeduplicationIT:CDSimpleDeduplicationCommandClient \
         --timeout-scale-factor 15 \
-        --concurrent-test-runs=1 \
         rpc-0:9000
     depends_on:
       - rpc-0
