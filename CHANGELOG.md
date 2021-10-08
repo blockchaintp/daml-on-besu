@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## v1.13.1
+
+* test: remove concurrency restriction [view commit](https://github.com/blockchaintp/daml-on-besu/commit/a6db0a16830b81ef6de66d75f43308e25dfd969d)
+
+## v1.13.0
+
+* fix: Restore direct dependency on sl4j [view commit](https://github.com/blockchaintp/daml-on-besu/commit/cca51a9bfe055be0b3563fe530aba6c3a2d230b7)
+* fix: Stage CD test runs so this passes more often [view commit](https://github.com/blockchaintp/daml-on-besu/commit/8fa22ac1b326117f33a28291e691c11570004f02)
+* fix: Make failures verbose, attempt the failing test alone [view commit](https://github.com/blockchaintp/daml-on-besu/commit/384fd49996f3a88366b9cab16d4261acef8238d3)
+* fix: up the timeout [view commit](https://github.com/blockchaintp/daml-on-besu/commit/889c3ec824f186290c600ec736df11f705920720)
+* fix: Assert, try a multithreaded executor [view commit](https://github.com/blockchaintp/daml-on-besu/commit/566197278925d89aa84b0f4d1c7262885e25a685)
+* fix: Sonar [view commit](https://github.com/blockchaintp/daml-on-besu/commit/3fb375e211570624b047b709aa2db861aad9f19b)
+* fix: Update the test tool docker to 1.31.1 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/52d34a7038a2237ef94335fc290c2c8551c22681)
+* fix: Rollback encapsulation in Filter [view commit](https://github.com/blockchaintp/daml-on-besu/commit/d1a07844e9c3d2058b56d428d96b9c2a382d2402)
+* fix: compare bytestrings in test [view commit](https://github.com/blockchaintp/daml-on-besu/commit/c151a945133e82e57e9ce4465a0b2e574b954eea)
+* fix: Checkstyle issues, formatting etc [view commit](https://github.com/blockchaintp/daml-on-besu/commit/7ea26cf8a91a1ef99622a03498d7f8c415ae5fbe)
+* feat: Upgrade [view commit](https://github.com/blockchaintp/daml-on-besu/commit/8e9fe65aa19abd4de5eceeb95af21d78562ee00d)
+
 ## v1.4.8
 
 * build(deps): Bump log4j-core from 2.13.0 to 2.13.2 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/3185806d8ac0dec5f3473e1585c0e7326194d236)
