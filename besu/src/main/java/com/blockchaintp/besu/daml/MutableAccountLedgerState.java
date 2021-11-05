@@ -165,11 +165,12 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
   }
 
   /**
-   * Add the supplied data to the ledger, starting at the supplied ethereum
-   * storage slot address.
+   * Add the supplied data to the ledger, starting at the supplied ethereum storage slot address.
    *
-   * @param rootAddress 256-bit ethereum storage slot address
-   * @param entry       value to store in the ledger
+   * @param rootAddress
+   *          256-bit ethereum storage slot address
+   * @param entry
+   *          value to store in the ledger
    */
   @SuppressWarnings({ "java:S1612", "checkstyle:MagicNumber" })
   private void addLedgerEntry(final UInt256 rootAddress, final Raw.Envelope entry) {
