@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v1.13.2
+
+* style(besu): spotless apply [view commit](https://github.com/blockchaintp/daml-on-besu/commit/e1598e839cd097bccbe6a391554e1da6229893a3)
+* fix(besu):  resolve issues with zero marking [view commit](https://github.com/blockchaintp/daml-on-besu/commit/b1bc83703dea87033d92d6724a26f9e976febfaa)
+
 ## v1.13.1
 
 * test: remove concurrency restriction [view commit](https://github.com/blockchaintp/daml-on-besu/commit/a6db0a16830b81ef6de66d75f43308e25dfd969d)
