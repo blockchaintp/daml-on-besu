@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import com.blockchaintp.besu.daml.Namespace.DamlKeyType;
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
@@ -37,6 +38,7 @@ import com.google.protobuf.util.Timestamps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.bytes.MutableBytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.ethereum.core.Address;
@@ -64,6 +66,7 @@ import scala.runtime.BoxedUnit;
  *
  */
 public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
+
   private static final Logger LOG = LogManager.getLogger();
 
   private static final LogTopic DAML_LOG_TOPIC = LogTopic
@@ -116,95 +119,54 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
   private ByteBuffer getLedgerEntry(final UInt256 key) {
     // reconstitute RLP bytes from all ethereum slices created for this ledger
     // entry
-    final MutableBytes32 slot = key.toBytes().mutableCopy();
-    LOG.debug("Will fetch slices starting at rootKey={}", () -> slot.toHexString());
-    UInt256 data = account.getStorageValue(UInt256.fromBytes(slot));
-    int slices = 1;
-    Bytes rawRlp = Bytes.EMPTY;
-    final List<Bytes> dataSoFar = new ArrayList<>();
-    final List<Bytes> unaltered = new ArrayList<>();
-    String deadBeef = data.toHexString();
-    if (deadBeef.contains("00dead")) {
-      dataSoFar.add(fromDeadBeef(data));
-      unaltered.add(data.toBytes());
-    } else {
-      if (!data.isZero()) {
-        dataSoFar.add(data.toMinimalBytes());
-        unaltered.add(data.toBytes());
-      } else {
-        return null;
-      }
-    }
-
-    while (!data.isZero()) {
-      slot.increment();
-      slices += 1;
-      data = account.getStorageValue(UInt256.fromBytes(slot));
-      if (data.isZero()) {
-        continue;
-      }
-      if (LOG.isTraceEnabled() && (slices % 100 == 0)) {
-        LOG.trace("Fetched from rootKey={} slices={} size={}", key.toHexString(), slices, rawRlp.size());
-      }
-      deadBeef = data.toHexString();
-      if (deadBeef.contains("00dead")) {
-        dataSoFar.add(fromDeadBeef(data));
-      } else {
-        dataSoFar.add(data.toMinimalBytes());
-      }
-      unaltered.add(data.toBytes());
-    }
-    rawRlp = Bytes.concatenate(dataSoFar.toArray(new Bytes[] {}));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Fetched from rootKey={} slices={} size={}", key.toHexString(), slices, rawRlp.size());
-    }
-    if (rawRlp.size() != 0) {
-      try {
-        final Bytes entry = RLP.decodeOne(rawRlp);
-        return ByteBuffer.wrap(entry.toArray());
-      } catch (RLPException e) {
-        LOG.error("RLP Serialization eror encountered, original input data to follow");
-        int index = 0;
-        for (Bytes b : unaltered) {
-          LOG.error("slot={} data={}", index, b.toHexString());
-          index++;
-        }
-        throw e;
-      }
-    } else {
+    final List<UInt256> data = readSlotSequence(key.toBytes());
+    if (data.isEmpty()) {
       return null;
     }
+    return decodeAndWrapOrThrow(data);
   }
 
-  private UInt256 makeDeadBeef(final Integer numberOfZeros) {
-    final String deadBeef = "0xDEAD" + numberOfZeros.toString();
-    return UInt256.fromHexString(deadBeef);
-  }
-
-  private UInt256 maybeMakeDeadBeef(final Bytes data) {
-    UInt256 part = UInt256.fromBytes(data);
-    if (data.size() > 0 && part.isZero()) {
-      return makeDeadBeef(data.size());
-    } else {
-      return part;
+  private List<UInt256> readSlotSequence(final Bytes32 initialAddress) {
+    var retList = new ArrayList<UInt256>();
+    MutableBytes32 address = initialAddress.mutableCopy();
+    UInt256 slotValue = account.getStorageValue(UInt256.fromBytes(address));
+    LOG.debug("Will fetch slices starting at rootKey={}", address::toHexString);
+    while (!slotValue.isZero()) {
+      retList.add(slotValue);
+      address.increment();
+      slotValue = account.getStorageValue(UInt256.fromBytes(address));
     }
+    return retList;
   }
 
-  private Bytes fromDeadBeef(final UInt256 data) {
-    final String testString = data.toHexString();
-    if (testString.contains("0000dead")) {
-      final String len = testString.substring(testString.lastIndexOf("dead") + 4);
-      final int numOfZeroBytes = Integer.parseInt(len);
-      final byte[] dataB = new byte[numOfZeroBytes];
-      return Bytes.of(dataB);
-    } else {
-      return data.toBytes();
+  private ByteBuffer decodeAndWrapOrThrow(final List<UInt256> data) throws RLPException {
+    List<Bytes> byteData = data.stream().map(ZeroMarking::unmarkZeros).collect(Collectors.toList());
+    Bytes rawRlp = Bytes.concatenate(byteData.toArray(new Bytes[] {}));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Fetched from slices={} size={}", data.size(), rawRlp.size());
+    }
+
+    if (rawRlp.size() == 0) {
+      return null;
+    }
+
+    try {
+      final Bytes entry = RLP.decodeOne(rawRlp);
+      return ByteBuffer.wrap(entry.toArray());
+    } catch (RLPException e) {
+      LOG.error("RLP Serialization error encountered, original input data to follow");
+      int index = 0;
+      for (Bytes b : byteData) {
+        LOG.error("slot={} data={}", index, b.toHexString());
+        index++;
+      }
+      throw e;
     }
   }
 
   /**
    * Add the supplied data to the ledger, starting at the supplied ethereum storage slot address.
-   * 
+   *
    * @param rootAddress
    *          256-bit ethereum storage slot address
    * @param entry
@@ -217,60 +179,17 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
     final MutableBytes32 slot = rootAddress.toBytes().mutableCopy();
     LOG.debug("Writing starting at address={} bytes={}", () -> rootAddress.toHexString(), () -> encoded.size());
 
-    // store the first part of the entry
-    final int sliceSz = Math.min(Namespace.STORAGE_SLOT_SIZE, encoded.size());
-    Bytes data = encoded.slice(0, sliceSz);
-    UInt256 part = maybeMakeDeadBeef(data);
-
-    var slices = 0;
-    account.setStorageValue(UInt256.fromBytes(slot), part);
-
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Wrote to address={} slice={} total bytes={}", UInt256.fromBytes(slot).toHexString(), slices,
-          part.toShortHexString());
-    }
-
-    // Store remaining parts, if any. We ensure that the data is stored in
-    // consecutive
-    // ethereum storage slots by incrementing the slot by one each time
-    int offset = Namespace.STORAGE_SLOT_SIZE;
-    while (offset < encoded.size()) {
-      final int length = Math.min(Namespace.STORAGE_SLOT_SIZE, encoded.size() - offset);
-      data = encoded.slice(offset, length);
-      if (data.hasLeadingZeroByte()) {
-        slot.increment();
-        slices++;
-        final UInt256 deadBeefData = makeDeadBeef(data.numberOfLeadingZeroBytes());
-        account.setStorageValue(UInt256.fromBytes(slot), deadBeefData);
-        data = data.slice(data.numberOfLeadingZeroBytes());
-        if (data.size() == 0) {
-          offset += Namespace.STORAGE_SLOT_SIZE;
-          continue;
-        }
-      }
-
-      part = maybeMakeDeadBeef(data);
-
-      slot.increment();
-      slices++;
-      account.setStorageValue(UInt256.fromBytes(slot), part);
-
+    List<UInt256> storageSlots = ZeroMarking.dataToSlotVals(encoded, Namespace.STORAGE_SLOT_SIZE);
+    int slices = 0;
+    for (var slotValue : storageSlots) {
+      account.setStorageValue(UInt256.fromBytes(slot), slotValue);
       if (LOG.isTraceEnabled()) {
         LOG.trace("Wrote to address={} slice={} total bytes={}", UInt256.fromBytes(slot).toHexString(), slices,
-            part.toShortHexString());
-        if (slices % 100 == 0) {
-          LOG.trace("Wrote to address={} slices={} offset={}", rootAddress.toHexString(), slices, offset);
-        }
+            slotValue.toShortHexString());
       }
-      offset += Namespace.STORAGE_SLOT_SIZE;
+      slices++;
+      slot.increment();
     }
-    // Mark the tombstone
-    slot.increment();
-    slices++;
-    account.setStorageValue(UInt256.fromBytes(slot), UInt256.ZERO);
-    final var logSlices = slices;
-    LOG.debug("Wrote to address={} slices={} total size={}", () -> rootAddress.toHexString(), () -> logSlices,
-        () -> encoded.size());
   }
 
   @Override
