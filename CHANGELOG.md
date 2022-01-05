@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Unreleased
+
+* build(deps): Bump log4j-core from 2.17.0 to 2.17.1 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/73ad5efc72051825f9c7d5518e61ba6ea9659e19)
+* build(deps): Bump log4j-api from 2.17.0 to 2.17.1 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/abb964539eed2ad51307cb2a72871690ca5bec75)
+
 ## v1.13.3
 
 * build(deps): Bump log4j-core from 2.16.0 to 2.17.0 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/8d9937bea12951d7ab2737a99bfc3de560be8d1c)
