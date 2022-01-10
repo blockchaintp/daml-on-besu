@@ -1,7 +1,8 @@
 # CHANGELOG
 
-## Unreleased
+## v1.13.4
 
+* fix(besu): provide better logging of the situation for NFE problem [view commit](https://github.com/blockchaintp/daml-on-besu/commit/0c089eeb9b5cacb555b8798e97e3cc6191b14a14)
 * build(deps): Bump log4j-core from 2.17.0 to 2.17.1 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/73ad5efc72051825f9c7d5518e61ba6ea9659e19)
 * build(deps): Bump log4j-api from 2.17.0 to 2.17.1 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/abb964539eed2ad51307cb2a72871690ca5bec75)
 
