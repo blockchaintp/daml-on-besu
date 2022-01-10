@@ -140,23 +140,23 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
   }
 
   private ByteBuffer decodeAndWrapOrThrow(final List<UInt256> data) throws RLPException {
-    List<Bytes> byteData = data.stream().map(ZeroMarking::unmarkZeros).collect(Collectors.toList());
-    Bytes rawRlp = Bytes.concatenate(byteData.toArray(new Bytes[] {}));
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Fetched from slices={} size={}", data.size(), rawRlp.size());
-    }
-
-    if (rawRlp.size() == 0) {
-      return null;
-    }
-
     try {
+      List<Bytes> byteData = data.stream().map(ZeroMarking::unmarkZeros).collect(Collectors.toList());
+      Bytes rawRlp = Bytes.concatenate(byteData.toArray(new Bytes[] {}));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Fetched from slices={} size={}", data.size(), rawRlp.size());
+      }
+
+      if (rawRlp.size() == 0) {
+        return null;
+      }
+
       final Bytes entry = RLP.decodeOne(rawRlp);
       return ByteBuffer.wrap(entry.toArray());
-    } catch (RLPException e) {
+    } catch (RLPException | NumberFormatException e) {
       LOG.error("RLP Serialization error encountered, original input data to follow");
       int index = 0;
-      for (Bytes b : byteData) {
+      for (UInt256 b : data) {
         LOG.error("slot={} data={}", index, b.toHexString());
         index++;
       }

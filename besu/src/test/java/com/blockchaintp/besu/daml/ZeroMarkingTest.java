@@ -16,6 +16,9 @@ package com.blockchaintp.besu.daml;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.junit.Test;
@@ -30,6 +33,7 @@ public class ZeroMarkingTest {
   private static final String SXT419_PROBLEM_SLOT1 = "0x4c4c353037494b4b4931484d35334b4c344c4d4c4d32b24c343737344e34b248";
   private static final String SXT419_PROBLEM_SLOT2 = "0x314c324d4d4b33374b364e4a4d34b44c4e3235334d4949b1b03010e2e1b87c7b";
   private static final String SXT419_PROBLEM_SLOT3 = "0x00000000000000000000000000720f9bc082e3d74e330200dead467b54000000";
+  private static final String SXT849_PROBLEM_SLOT0 = "0xdead4b920253dd62cb58ed84c05e4ff223b594da7f094c732787a06679f461dd";
 
   @Test
   public void testRoundTripZeroMarking() {
@@ -38,6 +42,12 @@ public class ZeroMarkingTest {
     LOGGER.error("{} becomes {}", SXT419_PROBLEM_SLOT3, unmarked.toHexString());
     assertNotEquals(SXT419_PROBLEM_SLOT3, unmarked.toHexString());
     assertEquals(dataValue.toMinimalBytes(), unmarked);
+  }
+
+  @Test(expected = NumberFormatException.class)
+  public void testSXT4XXShouldThrow() {
+    var dataValue = UInt256.fromHexString(SXT849_PROBLEM_SLOT0);
+    ZeroMarking.unmarkZeros(dataValue);
   }
 
   @Test
