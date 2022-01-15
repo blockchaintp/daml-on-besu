@@ -20,6 +20,7 @@ import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;
 
 public final class ZeroMarking {
+  private static final int MAX_DEAD_BEEF_SIZE = 59;
   private static final String DEAD_HEAD = "0xDEAD";
 
   // This is strange that it is different from the original STR_MARKER_DEAD
@@ -78,11 +79,30 @@ public final class ZeroMarking {
 
   public static Bytes unmarkZeros(final UInt256 data) {
     final String testString = data.toMinimalBytes().toHexString();
+
     if (testString.startsWith("0xdead") || testString.startsWith("0x0dead")) {
       final String remainder = testString.substring(testString.lastIndexOf("dead") + 4);
-      final int numOfZeroBytes = Integer.parseInt(remainder);
-      final byte[] dataB = new byte[numOfZeroBytes];
-      return Bytes.of(dataB);
+      try {
+        // A dead beef string integer will never be this long
+        if (remainder.length() > MAX_DEAD_BEEF_SIZE) {
+          return data.toMinimalBytes();
+        }
+        // no character in a deadbeef string is a character
+        // this will be a short loop if it is a deadbeef string
+        // if it is not a dead beef chances are an a-f char will occur quickly
+        for (int i = 0; i < remainder.length(); i++) {
+          if (!Character.isDigit(remainder.charAt(i))) {
+            return data.toMinimalBytes();
+          }
+        }
+        final int numOfZeroBytes = Integer.parseInt(remainder);
+        final byte[] dataB = new byte[numOfZeroBytes];
+        return Bytes.of(dataB);
+      } catch (final NumberFormatException e) {
+        // whatever this is, it is not an integer string so it must not be a dead beef
+        // string
+        return data.toMinimalBytes();
+      }
     } else {
       return data.toMinimalBytes();
     }
