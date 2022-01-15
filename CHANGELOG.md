@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.13.5
+
+* fix(besu): eliminate some false positive conditions in 0xdead detection [view commit](https://github.com/blockchaintp/daml-on-besu/commit/93d2018f397e3ee521452f02dcac04958122ba61)
+
 ## v1.13.4
 
 * fix(besu): provide better logging of the situation for NFE problem [view commit](https://github.com/blockchaintp/daml-on-besu/commit/0c089eeb9b5cacb555b8798e97e3cc6191b14a14)
