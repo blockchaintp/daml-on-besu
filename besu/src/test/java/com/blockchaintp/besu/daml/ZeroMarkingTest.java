@@ -44,10 +44,11 @@ public class ZeroMarkingTest {
     assertEquals(dataValue.toMinimalBytes(), unmarked);
   }
 
-  @Test(expected = NumberFormatException.class)
-  public void testSXT4XXShouldThrow() {
+  @Test
+  public void testSXT849ShouldNotThrow() {
     var dataValue = UInt256.fromHexString(SXT849_PROBLEM_SLOT0);
-    ZeroMarking.unmarkZeros(dataValue);
+    var testBytes = ZeroMarking.unmarkZeros(dataValue);
+    assertEquals(dataValue.toMinimalBytes(), testBytes);
   }
 
   @Test
