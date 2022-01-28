@@ -130,6 +130,7 @@ object Main {
       if (valid) Right(()) else Left(message)
     }
 
+
     final override def extraConfigParser(parser: OptionParser[Config[ExtraConfig]]): Unit = {
       parser
         .opt[String]("json-rpc-url")
@@ -183,6 +184,11 @@ object Main {
         .action { case (f, config) =>
           config.copy(extra = config.extra.copy(privateKeyFile = f))
         }
+      Metrics.metricsReporterParse(parser)(
+        (f, c) => c.copy(metricsReporter = f(c.metricsReporter)),
+        (f, c) => c.copy(metricsReportingInterval = (Duration.ofNanos(c.metricsReportingInterval.toNanos))),
+      )
+
       ()
     }
   }
