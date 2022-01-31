@@ -16,8 +16,17 @@
 package com.blockchaintp.besu.daml;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.format.DateTimeParseException;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
@@ -25,9 +34,11 @@ import com.blockchaintp.besu.daml.protobuf.DamlOperation;
 import com.blockchaintp.besu.daml.protobuf.DamlOperationBatch;
 import com.blockchaintp.besu.daml.protobuf.DamlTransaction;
 import com.blockchaintp.besu.daml.protobuf.TimeKeeperUpdate;
+import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.daml.lf.engine.Engine;
 import com.daml.metrics.Metrics;
+import com.daml.platform.configuration.MetricsReporter;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
 
@@ -38,6 +49,7 @@ import org.hyperledger.besu.ethereum.core.Gas;
 import org.hyperledger.besu.ethereum.mainnet.AbstractPrecompiledContract;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
+import scala.Option;
 
 public abstract class DamlPrecompiledContract extends AbstractPrecompiledContract {
   private static final Logger LOG = LogManager.getLogger();
@@ -45,6 +57,7 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
   private Engine engine;
 
   private Metrics metricsRegistry;
+  private Optional<ScheduledReporter> metricsReports = Optional.empty();
 
   protected DamlPrecompiledContract(final String name, final GasCalculator gasCalculator) {
     super(name, gasCalculator);
@@ -61,6 +74,84 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
       throw new DamlBesuRuntimeException("Cannot get local hostname");
     }
     this.metricsRegistry = new Metrics(SharedMetricRegistries.getOrCreate(hostname));
+    try {
+      this.metricsReports = reporter();
+    } catch (URISyntaxException | UnknownHostException e) {
+        LOG.error(
+          "Could not create metrics report from env:BESU_DAML_CONTRACT_REPORTING="
+            + System.getenv("BESU_DAML_CONTRACT_REPORTING"));
+    }
+
+    if (this.metricsReports.isEmpty()) {
+      LOG.info("No configured metrics reporter");
+    }
+
+    this.metricsReports.map((reporter) -> {
+      var interval = metricsInterval();
+      LOG.info("Reporting metrics using " + reporter.getClass().toString());
+
+      reporter.start(interval.toMillis(), TimeUnit.MILLISECONDS);
+      return reporter;
+    });
+  }
+
+  protected final Duration metricsInterval() {
+    var reporting = System.getenv("BESU_DAML_CONTRACT_REPORTING_INTERVAL");
+    try {
+        return Duration.parse(reporting);
+    } catch (DateTimeParseException e) {
+      return Duration.ofSeconds(10L);
+    }
+  }
+
+  /// Parse the env var BESU_DAML_CONTRACT_REPORTING in the same way as --metrics-reporter in a daml participant
+  protected final Optional<ScheduledReporter> reporter() throws URISyntaxException, UnknownHostException {
+    var reporting = System.getenv("BESU_DAML_CONTRACT_REPORTING");
+
+    if (reporting == null || reporting == "") {
+      return Optional.empty();
+    }
+
+    if (reporting == "console") {
+       return Optional.of(MetricsReporter.Console$.MODULE$.register(this.metricsRegistry.registry()));
+    }
+
+    if (reporting.startsWith("graphite://")) {
+      var uri = parseUri(reporting);
+      var metricPrefix = uri.getPath().replace("/", "").strip();
+
+      return Optional.of(MetricsReporter.Graphite$.MODULE$.apply(
+        getAddress(uri, MetricsReporter.Graphite$.MODULE$.defaultPort()),
+        Option.apply(metricPrefix)
+      ).register(this.metricsRegistry.registry()));
+    }
+
+    if (reporting.startsWith("prometheus://")) {
+
+      var uri = parseUri(reporting);
+
+      return Optional.of(MetricsReporter.Prometheus$.MODULE$.apply(
+        getAddress(uri, MetricsReporter.Prometheus$.MODULE$.defaultPort())
+      ).register(this.metricsRegistry.registry()));
+    }
+
+    return Optional.empty();
+  }
+
+  protected final URI parseUri(final String uri) throws URISyntaxException {
+      return new URI(uri);
+  }
+
+  protected final InetSocketAddress getAddress(final URI uri, final int defaultPort) throws UnknownHostException {
+    if (uri.getHost() == null) {
+      throw new UnknownHostException();
+    }
+    var port = defaultPort;
+
+    if (uri.getPort() > 0) {
+      port = uri.getPort();
+    }
+    return new InetSocketAddress(uri.getHost(), port);
   }
 
   protected final Metrics getMetricsRegistry() {
