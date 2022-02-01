@@ -26,6 +26,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+
 import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
 import com.blockchaintp.besu.daml.protobuf.DamlOperation;
@@ -33,6 +34,7 @@ import com.blockchaintp.besu.daml.protobuf.DamlOperationBatch;
 import com.blockchaintp.besu.daml.protobuf.DamlTransaction;
 import com.blockchaintp.besu.daml.protobuf.TimeKeeperUpdate;
 import com.codahale.metrics.ScheduledReporter;
+import com.codahale.metrics.Slf4jReporter;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.daml.lf.engine.Engine;
 import com.daml.metrics.Metrics;
@@ -47,6 +49,7 @@ import org.hyperledger.besu.ethereum.core.Gas;
 import org.hyperledger.besu.ethereum.mainnet.AbstractPrecompiledContract;
 import org.hyperledger.besu.ethereum.vm.GasCalculator;
 import org.hyperledger.besu.ethereum.vm.MessageFrame;
+import org.slf4j.LoggerFactory;
 import scala.Option;
 
 public abstract class DamlPrecompiledContract extends AbstractPrecompiledContract {
@@ -105,6 +108,17 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
 
     if (reporting == null || reporting.equals("")) {
       return Optional.empty();
+    }
+
+    if (reporting.equals("sl4j")) {
+      var reporter =          Slf4jReporter
+        .forRegistry(this.metricsRegistry.registry())
+        .outputTo(LoggerFactory.getLogger(LogManager.getLogger().getName()))
+        .convertRatesTo(TimeUnit.SECONDS)
+        .convertDurationsTo(TimeUnit.MILLISECONDS)
+        .build();
+
+      return Optional.of(reporter);
     }
 
     if (reporting.equals("console")) {

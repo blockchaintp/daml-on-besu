@@ -38,7 +38,7 @@ services:
       - &besu_log LOG4J_CONFIGURATION_FILE=/opt/daml-on-besu/besu/log4j2.xml
       - &besu_peer_port BESU_ENODE_PORT=30303
       - LOG_LEVEL=warn
-      - BESU_DAML_CONTRACT_REPORTING=console
+      - BESU_DAML_CONTRACT_REPORTING=sl4j
       - BESU_DAML_CONTRACT_REPORTING_INTERVAL=PT10S
     entrypoint: &besu_command
       - bash
@@ -74,6 +74,8 @@ services:
       - *besu_log
       - *besu_peer_port
       - LOG_LEVEL=warn
+      - BESU_DAML_CONTRACT_REPORTING=sl4j
+      - BESU_DAML_CONTRACT_REPORTING_INTERVAL=PT10S
     entrypoint: *besu_command
     volumes:
       - *random
@@ -90,6 +92,8 @@ services:
       - *besu_log
       - *besu_peer_port
       - LOG_LEVEL=warn
+      - BESU_DAML_CONTRACT_REPORTING=sl4j
+      - BESU_DAML_CONTRACT_REPORTING_INTERVAL=PT10S
     entrypoint: *besu_command
     volumes:
       - *random
@@ -106,6 +110,8 @@ services:
       - *besu_log
       - *besu_peer_port
       - LOG_LEVEL=warn
+      - BESU_DAML_CONTRACT_REPORTING=sl4j
+      - BESU_DAML_CONTRACT_REPORTING_INTERVAL=PT10S
     entrypoint: *besu_command
     volumes:
       - *random
