@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v1.13.6
+
+* fix: Log message formatting [view commit](https://github.com/blockchaintp/daml-on-besu/commit/21680d7bb3a0fde4df6ae984bf487e34fe3c60b4)
+* feat: Port in a json log formatter for metrics [view commit](https://github.com/blockchaintp/daml-on-besu/commit/5bb9a5859d2a17b1a03babd9a352c6ccc3009c56)
+* feat: Sl4j reporter, still plaintext [view commit](https://github.com/blockchaintp/daml-on-besu/commit/3c95dbe236d63ebf35aeaf36eb1469b6f5a30592)
+* fix: Sonar issues [view commit](https://github.com/blockchaintp/daml-on-besu/commit/ce58e8ca2ab2fabb2e870f08a90ea31ef26314f0)
+* fix: Add reporting to test docker images [view commit](https://github.com/blockchaintp/daml-on-besu/commit/556fc228ace14eba681f6dd45fe45bf47d596df1)
+* feat: Env var based metrics config [view commit](https://github.com/blockchaintp/daml-on-besu/commit/01c8df4b821bc85649b56d91b1c6acd82485dcf2)
+* feat: Add metrics cli extracted from sandbox-common [view commit](https://github.com/blockchaintp/daml-on-besu/commit/336f97b5d9e0a6bb2478f06a2bc87e071934a9c5)
+
 ## v1.13.5
 
 * fix(besu): eliminate some false positive conditions in 0xdead detection [view commit](https://github.com/blockchaintp/daml-on-besu/commit/93d2018f397e3ee521452f02dcac04958122ba61)
