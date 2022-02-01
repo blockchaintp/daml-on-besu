@@ -250,7 +250,7 @@ services:
     environment:
       - JAVA_ARGS=-Dvertx.disableFileCPResolving=true -Dlog4j.shutdownHookEnabled=false --add-opens java.base/sun.security.provider=ALL-UNNAMED
       - LOG4J_CONFIGURATION_FILE=/opt/daml-on-besu/besu/log4j2.xml
-      - BESU_DAML_CONTRACT_REPORTING=sl4j
+      - BESU_DAML_CONTRACT_REPORTING=sl4jjson
       - BESU_DAML_CONTRACT_REPORTING_INTERVAL=PT10S
     entrypoint:
       - bash
@@ -302,7 +302,7 @@ services:
     mem_limit: 500m
     environment:
       - JAVA_ARGS=-Dvertx.disableFileCPResolving=true -Dlog4j.shutdownHookEnabled=false --add-opens java.base/sun.security.provider=ALL-UNNAMED
-      - BESU_DAML_CONTRACT_REPORTING=sl4j
+      - BESU_DAML_CONTRACT_REPORTING=sl4jjson
       - BESU_DAML_CONTRACT_REPORTING_INTERVAL=PT10S
     entrypoint:
       - bash

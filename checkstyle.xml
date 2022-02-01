@@ -32,7 +32,10 @@
   </module>
   <module name="NewlineAtEndOfFile"/>
   <module name="OrderedProperties"/>
-
+  <module name="SuppressWithPlainTextCommentFilter">
+    <property name="offCommentFormat" value="CSOFF: ALL"/>
+    <property name="onCommentFormat" value="CSON: ALL"/>
+  </module>
   <module name="TreeWalker">
     <!-- Javadoc checks -->
     <module name="MissingJavadocPackage"/>

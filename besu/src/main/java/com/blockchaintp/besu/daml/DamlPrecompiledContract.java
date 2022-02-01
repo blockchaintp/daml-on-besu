@@ -121,6 +121,18 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
       return Optional.of(reporter);
     }
 
+    if (reporting.equals("sl4jjson")) {
+      var reporter =          SL4jJsonReporter
+        .forRegistry(this.metricsRegistry.registry())
+        .outputTo(LoggerFactory.getLogger(LogManager.getLogger().getName()))
+        .convertRatesTo(TimeUnit.SECONDS)
+        .convertDurationsTo(TimeUnit.MILLISECONDS)
+        .build();
+
+      return Optional.of(reporter);
+    }
+
+
     if (reporting.equals("console")) {
        return Optional.of(MetricsReporter.Console$.MODULE$.register(this.metricsRegistry.registry()));
     }
