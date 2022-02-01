@@ -78,7 +78,7 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
     try {
       this.metricsReports = reporter();
     } catch (URISyntaxException | UnknownHostException e) {
-        LOG.error("Could not create metrics report from env:BESU_DAML_CONTRACT_REPORTING ",
+        LOG.error("Could not create metrics report from env:BESU_DAML_CONTRACT_REPORTING {}",
             System.getenv("BESU_DAML_CONTRACT_REPORTING"));
     }
 
@@ -87,7 +87,7 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
     } else {
       var reporter = this.metricsReports.get();
       var interval = metricsInterval();
-      LOG.info("Reporting metrics usings ", reporter);
+      LOG.info("Reporting metrics usings {}", reporter);
 
       reporter.start(interval.toMillis(), TimeUnit.MILLISECONDS);
     }
