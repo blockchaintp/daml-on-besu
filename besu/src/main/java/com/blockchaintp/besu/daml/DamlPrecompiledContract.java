@@ -21,8 +21,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
@@ -77,9 +75,8 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
     try {
       this.metricsReports = reporter();
     } catch (URISyntaxException | UnknownHostException e) {
-        LOG.error(
-          "Could not create metrics report from env:BESU_DAML_CONTRACT_REPORTING="
-            + System.getenv("BESU_DAML_CONTRACT_REPORTING"));
+        LOG.error("Could not create metrics report from env:BESU_DAML_CONTRACT_REPORTING ",
+            System.getenv("BESU_DAML_CONTRACT_REPORTING"));
     }
 
     if (this.metricsReports.isEmpty()) {
@@ -87,7 +84,7 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
     } else {
       var reporter = this.metricsReports.get();
       var interval = metricsInterval();
-      LOG.info("Reporting metrics using " + reporter.getClass().toString());
+      LOG.info("Reporting metrics usings ", reporter);
 
       reporter.start(interval.toMillis(), TimeUnit.MILLISECONDS);
     }
