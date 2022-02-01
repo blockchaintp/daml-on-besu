@@ -84,15 +84,13 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
 
     if (this.metricsReports.isEmpty()) {
       LOG.info("No configured metrics reporter");
-    }
-
-    this.metricsReports.map((reporter) -> {
+    } else {
+      var reporter = this.metricsReports.get();
       var interval = metricsInterval();
       LOG.info("Reporting metrics using " + reporter.getClass().toString());
 
       reporter.start(interval.toMillis(), TimeUnit.MILLISECONDS);
-      return reporter;
-    });
+    }
   }
 
   protected final Duration metricsInterval() {
@@ -108,11 +106,11 @@ public abstract class DamlPrecompiledContract extends AbstractPrecompiledContrac
   protected final Optional<ScheduledReporter> reporter() throws URISyntaxException, UnknownHostException {
     var reporting = System.getenv("BESU_DAML_CONTRACT_REPORTING");
 
-    if (reporting == null || reporting == "") {
+    if (reporting == null || reporting.equals("")) {
       return Optional.empty();
     }
 
-    if (reporting == "console") {
+    if (reporting.equals("console")) {
        return Optional.of(MetricsReporter.Console$.MODULE$.register(this.metricsRegistry.registry()));
     }
 
