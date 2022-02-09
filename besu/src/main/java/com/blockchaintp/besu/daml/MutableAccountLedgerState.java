@@ -26,10 +26,14 @@ import java.util.stream.Collectors;
 import com.blockchaintp.besu.daml.Namespace.DamlKeyType;
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
 import com.blockchaintp.besu.daml.protobuf.TimeKeeperUpdate;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmissionDedupKey;
 import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.validator.LedgerStateOperations;
 import com.daml.lf.data.Time;
 import com.daml.lf.data.Time.Timestamp;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -67,6 +71,8 @@ import scala.runtime.BoxedUnit;
  */
 public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent> {
 
+  private static final int MAX_CACHE_SIZE = 100;
+
   private static final Logger LOG = LogManager.getLogger();
 
   private static final LogTopic DAML_LOG_TOPIC = LogTopic
@@ -76,6 +82,12 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
 
   private final MessageFrame messageFrame;
 
+  private static Cache<ByteString, ByteString> cache = Caffeine.newBuilder().maximumSize(MAX_CACHE_SIZE).build();
+  private static Cache<ByteString, DamlStateKey> parsedKeys = Caffeine.newBuilder().maximumSize(MAX_CACHE_SIZE)
+      .build();
+
+  private boolean caching;
+
   /**
    *
    * @param theMessageFrame
@@ -84,11 +96,49 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
     final WorldUpdater updater = theMessageFrame.getWorldState();
     this.account = updater.getOrCreate(Address.DAML_PUBLIC).getMutable();
     this.messageFrame = theMessageFrame;
+    this.caching = true;
+  }
+
+  private boolean isKeyCacheable(final Raw.StateKey key) {
+    var dsk = parsedKeys.getIfPresent(key);
+    if (dsk == null) {
+      try {
+        dsk = keyToDamlStateKey(key);
+        parsedKeys.put(key.bytes(), dsk);
+      } catch (InvalidProtocolBufferException e) {
+        return false;
+      }
+    }
+    if (dsk.getKeyCase().equals(DamlStateKey.KeyCase.SUBMISSION_DEDUP)) {
+      DamlSubmissionDedupKey dsdk = dsk.getSubmissionDedup();
+      if (dsdk.getSubmissionKind().equals(DamlSubmissionDedupKey.SubmissionKind.PACKAGE_UPLOAD)
+          || dsdk.getSubmissionKind().equals(DamlSubmissionDedupKey.SubmissionKind.PARTY_ALLOCATION)) {
+        this.caching = false;
+        return false;
+      } else {
+        this.caching = true;
+      }
+    }
+    var isPackage = dsk.getKeyCase().equals(DamlStateKey.KeyCase.PACKAGE_ID);
+    var isParty = dsk.getKeyCase().equals(DamlStateKey.KeyCase.PARTY);
+    LOG.trace("isKeyCacheable: {} isPackage: {} isCaching: {}", key, isPackage, this.caching);
+    return this.caching && (isPackage || isParty);
   }
 
   @Override
   @SuppressWarnings("java:S1612")
   public Raw.Envelope getDamlState(final Raw.StateKey key) {
+    boolean isCacheable = isKeyCacheable(key);
+    if (isCacheable) {
+      var val = MutableAccountLedgerState.cache.getIfPresent(key.bytes());
+      if (val != null) {
+        LOG.trace("Key cache hit size: {}", val.size());
+        return Raw.Envelope$.MODULE$.apply(val);
+      } else {
+        LOG.trace("Key cache miss");
+      }
+    }
+
     LOG.trace("Getting DAML state for key={}", key);
 
     final UInt256 address = Namespace.makeDamlStateKeyAddress(key);
@@ -98,7 +148,12 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
       LOG.trace("No ledger entry for DAML state key address={}", () -> address.toHexString());
       return null;
     }
-    return Raw.Envelope$.MODULE$.apply(ByteString.copyFrom(buf));
+    ByteString val = ByteString.copyFrom(buf);
+    if (isCacheable) {
+      LOG.debug("Key caching size: {}", val.size());
+      MutableAccountLedgerState.cache.put(key.bytes(), val);
+    }
+    return Raw.Envelope$.MODULE$.apply(val);
   }
 
   @Override
@@ -165,12 +220,13 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
   }
 
   /**
-   * Add the supplied data to the ledger, starting at the supplied ethereum storage slot address.
+   * Add the supplied data to the ledger, starting at the supplied ethereum
+   * storage slot address.
    *
    * @param rootAddress
-   *          256-bit ethereum storage slot address
+   *                    256-bit ethereum storage slot address
    * @param entry
-   *          value to store in the ledger
+   *                    value to store in the ledger
    */
   @SuppressWarnings({ "java:S1612", "checkstyle:MagicNumber" })
   private void addLedgerEntry(final UInt256 rootAddress, final Raw.Envelope entry) {
@@ -190,6 +246,10 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
       slices++;
       slot.increment();
     }
+  }
+
+  private DamlStateKey keyToDamlStateKey(final Raw.StateKey key) throws InvalidProtocolBufferException {
+    return DamlStateKey.parseFrom(key.bytes().toByteArray());
   }
 
   @Override
