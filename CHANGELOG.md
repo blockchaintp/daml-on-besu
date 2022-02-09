@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.13.7
+
+* fix(besu): add direct caching of packages and parties [view commit](https://github.com/blockchaintp/daml-on-besu/commit/607daad9433052b03260fe9d8f75a991309072b0)
+
 ## v1.13.6
 
 * fix: Log message formatting [view commit](https://github.com/blockchaintp/daml-on-besu/commit/21680d7bb3a0fde4df6ae984bf487e34fe3c60b4)
