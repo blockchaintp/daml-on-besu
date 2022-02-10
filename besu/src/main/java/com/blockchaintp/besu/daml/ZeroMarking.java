@@ -81,7 +81,7 @@ public final class ZeroMarking {
     final String testString = data.toMinimalBytes().toHexString();
 
     if (testString.startsWith("0xdead") || testString.startsWith("0x0dead")) {
-      final String remainder = testString.substring(testString.lastIndexOf("dead") + 8);
+      final String remainder = testString.substring(testString.indexOf("dead") + 8);
       try {
         // A dead beef string integer will never be this long
         if (remainder.length() > MAX_DEAD_BEEF_SIZE) {

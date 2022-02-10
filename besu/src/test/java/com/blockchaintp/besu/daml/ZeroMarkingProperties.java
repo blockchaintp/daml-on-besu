@@ -1,10 +1,8 @@
 package com.blockchaintp.besu.daml;
 
-import com.google.common.collect.Lists;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
 import net.jqwik.api.ForAll;
-import net.jqwik.api.From;
 import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
 import net.jqwik.api.RandomDistribution;
@@ -16,15 +14,12 @@ import org.apache.tuweni.units.bigints.UInt256;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
 
@@ -43,7 +38,7 @@ class ZeroMarkingProperties {
   class Input256 {
     public UInt256 i;
     boolean hasBeef = false;
-    boolean isZeroSpec = false;
+    boolean isZeroPad = false;
   }
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ZeroMarkingProperties.class);
@@ -111,8 +106,7 @@ class ZeroMarkingProperties {
 
     return Arbitraries.frequencyOf(
       Tuple.of(1,strayDeadBeef()),
-      Tuple.of(2,deadInt()),
-      Tuple.of(2,noise())
+      Tuple.of(2,deadInt())
     ).list().filter(l -> {
       var size = 0;
       for (var i: l) {
@@ -139,8 +133,13 @@ class ZeroMarkingProperties {
       }
 
       var ret = new Input256();
-      /// If we have a 0xdeadbeef{int} at the right of the buffer, we should get the zeropad
-      ret.isZeroSpec = chunks.size() > 0 && chunks.get(0).tag.equals("deadint");
+      /// If we have a 0xdeadbeef, we should align to it if it is the first
+      ret.hasBeef = chunks.size() > 0 &&
+        (chunks.get(chunks.size() - 1).tag.equals("deadint")
+          || chunks.get(chunks.size() -1).tag.equals("strayDeadBeef"));
+      /// If we have a 0xdeadbeef{int}, with nothing after we should get the zeropad
+      ret.isZeroPad = chunks.size() == 1 &&
+        (chunks.get(chunks.size() -1) .tag.equals("deadint"));
       ret.i = UInt256.fromBytes(Bytes.wrapByteBuffer(buf));
       return ret;
       }
@@ -156,17 +155,17 @@ class ZeroMarkingProperties {
 
     var time2 = System.nanoTime();
 
-    // If we have added a deadbeef, then it is aligned to it
-    if (input.hasBeef && !input.isZeroSpec) {
-      assert(unmarked.toHexString().startsWith("0xdeadbeef"))
-        : "Buf " + input.i.toHexString() +
-        " Umarked " + unmarked.toHexString();
-    }
-    if (input.isZeroSpec) {
+    if (input.isZeroPad) {
       assert(unmarked.toHexString().startsWith("0x00"))
+        : "Buf " + input.i.toHexString() +
+        " zero buffer of " + unmarked.size() + "bytes";
+    }
+    else if (input.hasBeef) {
+      assert(unmarked.toHexString().startsWith("0xdeadbeef"))
         : "Buf " + input.i.toHexString() +
         " Unmarked " + unmarked.toHexString();
     }
+
 
     LOGGER.info("Scan time {}ms with input bytes {}",
       ((time2 - time) / 1000),
