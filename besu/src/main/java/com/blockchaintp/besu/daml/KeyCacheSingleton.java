@@ -34,7 +34,7 @@ public class KeyCacheSingleton {
     cache = Caffeine.newBuilder().maximumSize(cacheSz).build();
   }
 
-  synchronized public static KeyCacheSingleton getInstance() {
+  public static synchronized KeyCacheSingleton getInstance() {
     if (null == instance) {
       instance = new KeyCacheSingleton();
     }

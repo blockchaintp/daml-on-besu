@@ -15,7 +15,7 @@ package com.blockchaintp.besu.daml;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.google.protobuf.ByteString;;
+import com.google.protobuf.ByteString;
 
 public class ValueCacheSingleton {
   private static final String VALUE_CACHE_SIZE_ENV = "VALUE_CACHE_SIZE";
@@ -33,7 +33,7 @@ public class ValueCacheSingleton {
     cache = Caffeine.newBuilder().maximumSize(cacheSz).build();
   }
 
-  static synchronized public ValueCacheSingleton getInstance() {
+  public static synchronized ValueCacheSingleton getInstance() {
     if (null == instance) {
       instance = new ValueCacheSingleton();
     }
