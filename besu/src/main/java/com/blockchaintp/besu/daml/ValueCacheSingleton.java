@@ -18,7 +18,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.protobuf.ByteString;;
 
 public class ValueCacheSingleton {
-  private static final long MAX_CACHE_SIZE = 100;
+  private static final String VALUE_CACHE_SIZE_ENV = "VALUE_CACHE_SIZE";
+  private static final String DEFAULT_CACHE_SIZE = "100";
   private static ValueCacheSingleton instance;
   private Cache<ByteString, ByteString> cache;
 
@@ -27,7 +28,9 @@ public class ValueCacheSingleton {
   }
 
   private ValueCacheSingleton() {
-    cache = Caffeine.newBuilder().maximumSize(MAX_CACHE_SIZE).build();
+    var env = System.getenv();
+    long cacheSz = Long.parseLong(env.getOrDefault(VALUE_CACHE_SIZE_ENV, DEFAULT_CACHE_SIZE));
+    cache = Caffeine.newBuilder().maximumSize(cacheSz).build();
   }
 
   static synchronized public ValueCacheSingleton getInstance() {

@@ -19,7 +19,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.protobuf.ByteString;
 
 public class KeyCacheSingleton {
-  private static final long MAX_CACHE_SIZE = 100;
+  private static final String VALUE_CACHE_SIZE_ENV = "VALUE_CACHE_SIZE";
+  private static final String DEFAULT_CACHE_SIZE = "100";
   private static KeyCacheSingleton instance;
   private Cache<ByteString, DamlStateKey> cache;
 
@@ -28,7 +29,9 @@ public class KeyCacheSingleton {
   }
 
   private KeyCacheSingleton() {
-    cache = Caffeine.newBuilder().maximumSize(MAX_CACHE_SIZE).build();
+    var env = System.getenv();
+    long cacheSz = Long.parseLong(env.getOrDefault(VALUE_CACHE_SIZE_ENV, DEFAULT_CACHE_SIZE));
+    cache = Caffeine.newBuilder().maximumSize(cacheSz).build();
   }
 
   synchronized public static KeyCacheSingleton getInstance() {
