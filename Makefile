@@ -43,7 +43,7 @@ $(MARKERS)/test_public_ibft: package
 		-v || true
 	docker-compose -p $(ISOLATION_ID) -f docker/daml-test-public-ibft.yaml up \
 		--exit-code-from ledger-api-testtool || true
-	docker logs $(ISOLATION_ID)_ledger-api-testtool_1 > build/results.txt 2>&1
+	docker-compose -p $(ISOLATION_ID) logs ledger-api-testtool > build/results.txt 2>&1
 	./run_tests ./build/results.txt PUBLIC > build/daml-test-public-ibft.results
 	docker-compose -p $(ISOLATION_ID) -f docker/daml-test-public-ibft.yaml down \
 		|| true
