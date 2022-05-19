@@ -29,8 +29,8 @@ public class ValueCacheSingleton {
 
   private ValueCacheSingleton() {
     var env = System.getenv();
-    long cacheSz = Long.parseLong(env.getOrDefault(VALUE_CACHE_SIZE_ENV, DEFAULT_CACHE_SIZE));
-    cache = Caffeine.newBuilder().maximumSize(cacheSz).build();
+    long cacheSize = Long.parseLong(env.getOrDefault(VALUE_CACHE_SIZE_ENV, DEFAULT_CACHE_SIZE));
+    cache = Caffeine.newBuilder().maximumSize(cacheSize).build();
   }
 
   public static synchronized ValueCacheSingleton getInstance() {
