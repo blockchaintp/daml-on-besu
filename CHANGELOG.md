@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## Unreleased
+
+* style(besu): replace cachSz with cacheSize [view commit](https://github.com/blockchaintp/daml-on-besu/commit/9e268e3df189bb2e638f8c741b18bbf68a3c74af)
+* fix(besu): fix modifier orders and typos [view commit](https://github.com/blockchaintp/daml-on-besu/commit/3e694f38409664a98fe88940fcbc89696e07b69f)
+* docs(readthedocs): pin mkdocs version [view commit](https://github.com/blockchaintp/daml-on-besu/commit/47182c92d24705c02a543740adff3be731358f6e)
+* test(docker): turn off slf4jjson reporting [view commit](https://github.com/blockchaintp/daml-on-besu/commit/950ba8ee9727fc44b354579d93a164693606d190)
+* feat(besu): configure caches via env var [view commit](https://github.com/blockchaintp/daml-on-besu/commit/93082f68fbfbf2b73e3f9401be6bdbb901cd7a5a)
+* refactor(besu): move caches to singletons [view commit](https://github.com/blockchaintp/daml-on-besu/commit/bc3ab4f26dbe9fed90d58e06ff021c4c33918630)
+
 ## v1.13.7
 
 * fix(besu): add direct caching of packages and parties [view commit](https://github.com/blockchaintp/daml-on-besu/commit/607daad9433052b03260fe9d8f75a991309072b0)
