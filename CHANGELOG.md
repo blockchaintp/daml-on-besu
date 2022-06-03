@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Unreleased
+## v1.13.8
 
 * style(besu): replace cachSz with cacheSize [view commit](https://github.com/blockchaintp/daml-on-besu/commit/9e268e3df189bb2e638f8c741b18bbf68a3c74af)
 * fix(besu): fix modifier orders and typos [view commit](https://github.com/blockchaintp/daml-on-besu/commit/3e694f38409664a98fe88940fcbc89696e07b69f)
