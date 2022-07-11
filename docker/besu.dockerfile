@@ -26,7 +26,7 @@ WORKDIR /opt/daml-on-besu
 COPY besu/target /project
 RUN unzip -qq /project/*-bin.zip && mv besu* besu && rm -rf /project/*
 
-# -----
+# ------------------------------------------------------------------------------
 FROM azul/zulu-openjdk:11.0.15-11.56.19
 
 COPY --from=install /opt/besu /opt/besu

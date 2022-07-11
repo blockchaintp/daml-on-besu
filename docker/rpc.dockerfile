@@ -20,7 +20,7 @@ RUN \
   zip
 
 WORKDIR /opt/daml-on-besu
-COPY rpc/target  /project
+COPY rpc/target /project
 RUN unzip -qq /project/*-bin.zip && mv rpc* rpc && rm -rf /project/*
 
 # ------------------------------------------------------------------------------
