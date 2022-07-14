@@ -1,4 +1,4 @@
-# Copyright 2020 Blockchain Technology Partners
+# Copyright 2020-2022 Blockchain Technology Partners
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,23 +15,6 @@
 FROM hyperledger/besu:1.4.0 as install
 
 # ------------------------------------------------------------------------------
-FROM ubuntu:bionic as ubuntu-zulu-base
-
-RUN \
-  apt-get update -y && \
-  apt-get install -y \
-  curl \
-  gnupg \
-  software-properties-common \
-  wget
-
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0xB1998361219BD9C9 && \
-  apt-add-repository 'deb http://repos.azulsystems.com/ubuntu stable main' && \
-  apt-get update -y && \
-  apt-get install -y \
-  zulu-11
-
-# ------------------------------------------------------------------------------
 FROM ubuntu:bionic as build
 
 RUN \
@@ -43,8 +26,8 @@ WORKDIR /opt/daml-on-besu
 COPY besu/target /project
 RUN unzip -qq /project/*-bin.zip && mv besu* besu && rm -rf /project/*
 
-# -----
-FROM ubuntu-zulu-base
+# ------------------------------------------------------------------------------
+FROM azul/zulu-openjdk:11.0.15-11.56.19
 
 COPY --from=install /opt/besu /opt/besu
 COPY --from=build /opt/daml-on-besu /opt/daml-on-besu
