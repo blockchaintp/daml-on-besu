@@ -22,6 +22,7 @@ import com.blockchaintp.besu.daml.protobuf.DamlTransaction;
 import com.daml.caching.Cache;
 import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.store.DamlLogEntryId;
+import com.daml.ledger.validator.LogEntryIdAllocator;
 import com.daml.ledger.validator.SubmissionValidator;
 import com.daml.ledger.validator.ValidationFailed;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -64,8 +65,15 @@ public final class DamlPublicPrecompiledContract extends DamlPrecompiledContract
       LOG.warn("InvalidProtocolBufferException when parsing log entry id", e1);
       throw new InvalidTransactionException(e1.getMessage());
     }
-    final SubmissionValidator<DamlLogEvent> validator = SubmissionValidator.create(ledgerState, () -> logEntryId, false,
-        Cache.none(), getEngine(), getMetricsRegistry());
+    final LogEntryIdAllocator idAllocator = new LogEntryIdAllocator() {
+      @Override
+      public DamlLogEntryId allocate() {
+        return logEntryId;
+      }
+    };
+    final SubmissionValidator<DamlLogEvent> validator =
+      com.daml.ledger.validator.SubmissionValidator$.MODULE$.createForTimeMode(
+        ledgerState, idAllocator, false, Cache.none(), getEngine(), getMetricsRegistry());
     final com.daml.lf.data.Time.Timestamp recordTime = ledgerState.getRecordTime();
     final Future<Either<ValidationFailed, DamlLogEvent>> validateAndCommit = validator.validateAndCommit(
         Raw.Envelope$.MODULE$.apply(tx.getSubmission()), correlationId, recordTime, participantId, getEc());
