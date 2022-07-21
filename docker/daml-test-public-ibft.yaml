@@ -251,15 +251,17 @@ services:
         java -jar ledger-api-test-tool.jar \
         $$TEST_SPEC \
         --timeout-scale-factor 20 \
-        --include CommandDeduplicationIT:CDSimpleDeduplicationCommandClient \
-        --include CommandDeduplicationIT:CDSimpleDeduplicationCommandClient \
+        --include CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationBasic \
+        --include CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationCommandClient \
+        --include CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationMixedClients \
         --verbose \
         rpc-0:9000 rpc-1:9000
         java -jar ledger-api-test-tool.jar \
         $$TEST_SPEC \
         --verbose \
-        --exclude CommandDeduplicationIT:CDSimpleDeduplicationBasic \
-        --exclude CommandDeduplicationIT:CDSimpleDeduplicationCommandClient \
+        --exclude CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationBasic \
+        --exclude CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationCommandClient \
+        --exclude CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationMixedClients \
         --timeout-scale-factor 15 \
         rpc-0:9000
     depends_on:
