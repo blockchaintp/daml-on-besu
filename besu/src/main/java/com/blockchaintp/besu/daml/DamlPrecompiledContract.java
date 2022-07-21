@@ -38,7 +38,7 @@ import com.codahale.metrics.Slf4jReporter;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.daml.lf.engine.Engine;
 import com.daml.metrics.Metrics;
-import com.daml.platform.configuration.MetricsReporter;
+import com.daml.metrics.MetricsReporter;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
 

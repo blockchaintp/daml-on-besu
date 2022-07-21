@@ -138,7 +138,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <protobuf.version>3.10.0</protobuf.version>
-    <daml.sdk.version>1.13.1</daml.sdk.version>
+    <daml.sdk.version>1.18.3</daml.sdk.version>
     <daml.bindings.version>2.3.3</daml.bindings.version>
     <besu.sdk.version>1.4.0</besu.sdk.version>
     <scala.lang.version>2.13</scala.lang.version>

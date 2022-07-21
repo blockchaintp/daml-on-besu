@@ -13,7 +13,7 @@
  */
 package com.blockchaintp.besu.daml;
 
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
+import com.daml.ledger.participant.state.kvutils.store.DamlStateKey;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.protobuf.ByteString;

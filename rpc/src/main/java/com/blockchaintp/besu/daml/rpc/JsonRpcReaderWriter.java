@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Blockchain Technology Partners
+ * Copyright 2021-2022 Blockchain Technology Partners
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -18,13 +18,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 import com.daml.ledger.api.health.HealthStatus;
+import com.daml.ledger.offset.Offset;
 import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.CommitMetadata;
 import com.daml.ledger.participant.state.kvutils.api.LedgerReader;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.kvutils.api.LedgerWriter;
-import com.daml.ledger.participant.state.v1.Offset;
-import com.daml.ledger.participant.state.v1.SubmissionResult;
+import com.daml.ledger.participant.state.v2.SubmissionResult;
 import com.daml.telemetry.TelemetryContext;
 
 import org.slf4j.Logger;
@@ -54,7 +54,7 @@ public final class JsonRpcReaderWriter implements LedgerReader, LedgerWriter {
   public JsonRpcReaderWriter(final String participantId, final String privateKeyFile, final String jsonRpcUrl,
       final String ledgerId) {
     String privateKey = readBesuPrivateKeyFromFile(privateKeyFile);
-    reader = new JsonRpcReader(jsonRpcUrl, ledgerId);
+    reader = new JsonRpcReader(jsonRpcUrl, ledgerId, participantId);
     writer = new JsonRpcWriter(participantId, jsonRpcUrl, privateKey);
   }
 

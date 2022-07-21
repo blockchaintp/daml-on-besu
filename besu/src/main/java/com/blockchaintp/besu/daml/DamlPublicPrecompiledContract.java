@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Blockchain Technology Partners
+ * Copyright 2020-2022 Blockchain Technology Partners
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -20,8 +20,8 @@ import java.util.concurrent.Executors;
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
 import com.blockchaintp.besu.daml.protobuf.DamlTransaction;
 import com.daml.caching.Cache;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.Raw;
+import com.daml.ledger.participant.state.kvutils.store.DamlLogEntryId;
 import com.daml.ledger.validator.SubmissionValidator;
 import com.daml.ledger.validator.ValidationFailed;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -64,8 +64,9 @@ public final class DamlPublicPrecompiledContract extends DamlPrecompiledContract
       LOG.warn("InvalidProtocolBufferException when parsing log entry id", e1);
       throw new InvalidTransactionException(e1.getMessage());
     }
-    final SubmissionValidator<DamlLogEvent> validator = SubmissionValidator.create(ledgerState, () -> logEntryId, false,
-        Cache.none(), getEngine(), getMetricsRegistry());
+    final SubmissionValidator<DamlLogEvent> validator =
+      com.daml.ledger.validator.SubmissionValidator$.MODULE$.createForTimeMode(
+        ledgerState, () -> logEntryId, false, Cache.none(), getEngine(), getMetricsRegistry());
     final com.daml.lf.data.Time.Timestamp recordTime = ledgerState.getRecordTime();
     final Future<Either<ValidationFailed, DamlLogEvent>> validateAndCommit = validator.validateAndCommit(
         Raw.Envelope$.MODULE$.apply(tx.getSubmission()), correlationId, recordTime, participantId, getEc());

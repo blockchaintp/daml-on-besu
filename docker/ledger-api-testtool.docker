@@ -13,8 +13,8 @@
 # limitations under the License.
 FROM azul/zulu-openjdk:11.0.15-11.56.19
 
-ARG DAML_SDK_VERSION=1.13.1
-ARG DAML_REPO_VERSION=1.13.1
+ARG DAML_SDK_VERSION=1.18.3
+ARG DAML_REPO_VERSION=1.18.3
 
 RUN apt-get update -y && \
   apt-get install -y \

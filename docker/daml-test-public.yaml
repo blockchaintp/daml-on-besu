@@ -109,16 +109,18 @@ services:
         java -jar ledger-api-test-tool.jar \
         $$TEST_SPEC \
         --verbose \
-        --include CommandDeduplicationIT:CDSimpleDeduplicationCommandClient \
-        --include CommandDeduplicationIT:CDSimpleDeduplicationCommandClient \
+        --include CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationBasic \
+        --include CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationCommandClient \
+        --include CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationMixedClients \
         --timeout-scale-factor 20 \
         --concurrent-test-runs=1 \
         rpc-0:9000
         java -jar ledger-api-test-tool.jar \
         $$TEST_SPEC \
         --verbose \
-        --exclude CommandDeduplicationIT:CDSimpleDeduplicationBasic \
-        --exclude CommandDeduplicationIT:CDSimpleDeduplicationCommandClient \
+        --exclude CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationBasic \
+        --exclude CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationCommandClient \
+        --exclude CommandDeduplicationIT:ParticipantCommandDeduplicationSimpleDeduplicationMixedClients \
         --timeout-scale-factor 15 \
         --concurrent-test-runs=1 \
         rpc-0:9000

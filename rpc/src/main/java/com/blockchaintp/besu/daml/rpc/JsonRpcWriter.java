@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Blockchain Technology Partners
+ * Copyright 2021-2022 Blockchain Technology Partners
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -18,17 +18,21 @@ import java.util.UUID;
 import com.blockchaintp.besu.daml.protobuf.DamlOperation;
 import com.blockchaintp.besu.daml.protobuf.DamlTransaction;
 import com.daml.ledger.api.health.HealthStatus;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.CommitMetadata;
 import com.daml.ledger.participant.state.kvutils.api.LedgerWriter;
-import com.daml.ledger.participant.state.v1.SubmissionResult;
+import com.daml.ledger.participant.state.kvutils.store.DamlLogEntryId;
+import com.daml.ledger.participant.state.v2.SubmissionResult;
 import com.daml.telemetry.TelemetryContext;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.any.Any;
+import com.google.rpc.code.Code;
+import com.google.rpc.status.Status;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import scala.collection.immutable.Seq;
 import scala.concurrent.Future;
 
 /**
@@ -48,7 +52,7 @@ public final class JsonRpcWriter implements LedgerWriter {
 
   /**
    * Creates a JsonRpcWriter
-   * 
+   *
    * @param configuredParticipantId
    *          the participantId
    * @param configuredUrl
@@ -82,8 +86,11 @@ public final class JsonRpcWriter implements LedgerWriter {
     } catch (final InterruptedException e) {
       LOG.warn("JsonRpcWriter interrupted while submitting a request");
       Thread.currentThread().interrupt();
+      @SuppressWarnings("unchecked")
+      final Seq<Any> noDetails = scala.collection.immutable.Seq$.MODULE$.<Any>empty();
       return Future
-          .successful(new SubmissionResult.InternalError("JsonRpcWriter interrupted while submitting a request"));
+          .successful(new SubmissionResult.SynchronousError(Status.of(Code.INTERNAL$.MODULE$.value(),
+          "JsonRpcWriter interrupted while submitting a request", noDetails)));
     }
     LOG.debug("Acknowledging Submission");
     return Future.successful(SubmissionResult.Acknowledged$.MODULE$);
