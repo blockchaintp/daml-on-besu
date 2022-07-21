@@ -19,7 +19,7 @@ import java.util.List;
 import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
 import com.daml.ledger.offset.Offset;
-import com.daml.ledger.participant.state.kvutils.OffsetBuilder;
+import com.daml.ledger.participant.state.kvutils.KVOffsetBuilder;
 import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.LedgerReader;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
@@ -40,13 +40,10 @@ public class JsonRpcReader extends AbstractJsonRpcReader<LedgerRecord> implement
 
   private static final Logger LOG = LoggerFactory.getLogger(JsonRpcReader.class);
 
-  /**
-   *
-   * @param rpcUrl
-   * @param configuredLedgerId
-   */
-  public JsonRpcReader(final String rpcUrl, final String configuredLedgerId) {
-    super(rpcUrl, configuredLedgerId, null);
+  private final KVOffsetBuilder offsetBuilder = new KVOffsetBuilder((byte) 0);
+
+  public JsonRpcReader(final String rpcUrl, final String configuredLedgerId, final String theParticipantId) {
+    super(rpcUrl, configuredLedgerId, theParticipantId);
   }
 
   @SuppressWarnings("rawtypes")
@@ -75,7 +72,7 @@ public class JsonRpcReader extends AbstractJsonRpcReader<LedgerRecord> implement
     final long blockNum = log.getBlockNumber().longValue();
     final DamlLogEvent event = DamlLogEvent.parseFrom(Utils.hexToBytes(log.getData()));
     if (!event.hasTimeUpdate()) {
-      final Offset ko = OffsetBuilder.fromLong(blockNum, (int) suboffset, 0);
+      final Offset ko = offsetBuilder.of(blockNum, (int) suboffset, 0);
       final LedgerRecord lr = new LedgerRecord(ko, Raw.LogEntryId$.MODULE$.apply(event.getLogEntryId()),
           Raw.Envelope$.MODULE$.apply(event.getLogEntry()));
       return List.of(lr);

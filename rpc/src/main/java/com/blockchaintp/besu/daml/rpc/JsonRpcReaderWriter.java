@@ -54,7 +54,7 @@ public final class JsonRpcReaderWriter implements LedgerReader, LedgerWriter {
   public JsonRpcReaderWriter(final String participantId, final String privateKeyFile, final String jsonRpcUrl,
       final String ledgerId) {
     String privateKey = readBesuPrivateKeyFromFile(privateKeyFile);
-    reader = new JsonRpcReader(jsonRpcUrl, ledgerId);
+    reader = new JsonRpcReader(jsonRpcUrl, ledgerId, participantId);
     writer = new JsonRpcWriter(participantId, jsonRpcUrl, privateKey);
   }
 

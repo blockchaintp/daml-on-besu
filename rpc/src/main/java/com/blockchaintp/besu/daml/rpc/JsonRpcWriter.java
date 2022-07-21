@@ -25,10 +25,14 @@ import com.daml.ledger.participant.state.kvutils.store.DamlLogEntryId;
 import com.daml.ledger.participant.state.v2.SubmissionResult;
 import com.daml.telemetry.TelemetryContext;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.any.Any;
+import com.google.rpc.code.Code;
+import com.google.rpc.status.Status;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import scala.collection.immutable.Seq;
 import scala.concurrent.Future;
 
 /**
@@ -82,8 +86,11 @@ public final class JsonRpcWriter implements LedgerWriter {
     } catch (final InterruptedException e) {
       LOG.warn("JsonRpcWriter interrupted while submitting a request");
       Thread.currentThread().interrupt();
+      @SuppressWarnings("unchecked")
+      final Seq<Any> noDetails = scala.collection.immutable.Seq$.MODULE$.<Any>empty();
       return Future
-          .successful(new SubmissionResult.InternalError("JsonRpcWriter interrupted while submitting a request"));
+          .successful(new SubmissionResult.SynchronousError(Status.of(Code.INTERNAL$.MODULE$.value(),
+          "JsonRpcWriter interrupted while submitting a request", noDetails)));
     }
     LOG.debug("Acknowledging Submission");
     return Future.successful(SubmissionResult.Acknowledged$.MODULE$);
