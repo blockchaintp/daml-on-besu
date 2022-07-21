@@ -32,6 +32,7 @@ import com.daml.ledger.participant.state.kvutils.store.DamlSubmissionDedupKey;
 import com.daml.ledger.validator.LedgerStateOperations;
 import com.daml.lf.data.Time;
 import com.daml.lf.data.Time.Timestamp;
+import com.daml.logging.LoggingContext;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
@@ -389,12 +390,13 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
 
   @Override
   public Future<DamlLogEvent> appendToLog(final Raw.LogEntryId key, final Raw.Envelope value,
-      final ExecutionContext context) {
+      final ExecutionContext context, final LoggingContext lc) {
     return Future.successful(sendLogEvent(key, value));
   }
 
   @Override
-  public Future<Option<Raw.Envelope>> readState(final Raw.StateKey key, final ExecutionContext context) {
+  public Future<Option<Raw.Envelope>> readState(final Raw.StateKey key, final ExecutionContext context,
+      final LoggingContext lc) {
     final var val = getDamlState(key);
     if (null != val) {
       return Future.successful(Option.apply(val));
@@ -405,7 +407,7 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
 
   @Override
   public Future<Seq<Option<Raw.Envelope>>> readState(final Iterable<Raw.StateKey> keys,
-      final ExecutionContext context) {
+      final ExecutionContext context, final LoggingContext lc) {
     final var keyColl = JavaConverters.asJavaCollection(keys);
     final var damlStates = getDamlStates(keyColl);
     final var retCollection = new ArrayList<Option<Raw.Envelope>>();
@@ -421,7 +423,7 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
 
   @Override
   public Future<BoxedUnit> writeState(final Iterable<Tuple2<Raw.StateKey, Raw.Envelope>> keyValuePairs,
-      final ExecutionContext executionContext) {
+      final ExecutionContext executionContext, final LoggingContext lc) {
     final var setColl = JavaConverters.asJavaCollection(keyValuePairs);
     for (final var tup : setColl) {
       setDamlState(tup._1(), tup._2());
@@ -430,14 +432,15 @@ public final class MutableAccountLedgerState implements LedgerState<DamlLogEvent
   }
 
   @Override
-  public Future<BoxedUnit> writeState(final Raw.StateKey key, final Raw.Envelope value, final ExecutionContext ec) {
+  public Future<BoxedUnit> writeState(final Raw.StateKey key, final Raw.Envelope value, final ExecutionContext ec,
+      final LoggingContext lc) {
     setDamlState(key, value);
     return Future.successful(BoxedUnit.UNIT);
   }
 
   @Override
   public <T> Future<T> inTransaction(final Function1<LedgerStateOperations<DamlLogEvent>, Future<T>> body,
-      final ExecutionContext ec) {
+      final ExecutionContext ec, final LoggingContext lc) {
     return body.apply(this);
   }
 }
