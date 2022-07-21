@@ -15,7 +15,7 @@ package com.blockchaintp.besu.daml;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
+import com.daml.ledger.participant.state.kvutils.store.DamlStateKey;
 
 import com.daml.ledger.participant.state.kvutils.Raw;
 import org.apache.tuweni.bytes.Bytes;

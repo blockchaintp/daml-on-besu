@@ -21,14 +21,14 @@ import com.daml.ledger.api.auth.AuthServiceJWT
 import com.daml.ledger.api.auth.AuthServiceWildcard
 import com.daml.jwt.JwksVerifier
 import com.daml.jwt.RSA256Verifier
+import com.daml.ledger.configuration.Configuration
+import com.daml.ledger.configuration.LedgerTimeModel
 import com.daml.ledger.participant.state.kvutils.api.KeyValueLedger
 import com.daml.ledger.participant.state.kvutils.api.KeyValueParticipantState
 import com.daml.ledger.participant.state.kvutils.app.Config
 import com.daml.ledger.participant.state.kvutils.app.LedgerFactory
 import com.daml.ledger.participant.state.kvutils.app.ParticipantConfig
 import com.daml.ledger.participant.state.kvutils.app.Runner
-import com.daml.ledger.participant.state.v1.Configuration
-import com.daml.ledger.participant.state.v1.TimeModel
 import com.daml.ledger.resources.ResourceContext
 import com.daml.ledger.resources.ResourceOwner
 import com.daml.lf.engine.Engine

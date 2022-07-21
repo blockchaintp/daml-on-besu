@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.util.List;
 
 import com.daml.ledger.api.health.HealthStatus;
-import com.daml.ledger.participant.state.v1.Offset;
+import com.daml.ledger.offset.Offset;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

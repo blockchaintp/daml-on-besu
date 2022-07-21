@@ -18,11 +18,11 @@ import java.util.UUID;
 import com.blockchaintp.besu.daml.protobuf.DamlOperation;
 import com.blockchaintp.besu.daml.protobuf.DamlTransaction;
 import com.daml.ledger.api.health.HealthStatus;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.CommitMetadata;
 import com.daml.ledger.participant.state.kvutils.api.LedgerWriter;
-import com.daml.ledger.participant.state.v1.SubmissionResult;
+import com.daml.ledger.participant.state.kvutils.store.DamlLogEntryId;
+import com.daml.ledger.participant.state.v2.SubmissionResult;
 import com.daml.telemetry.TelemetryContext;
 import com.google.protobuf.ByteString;
 

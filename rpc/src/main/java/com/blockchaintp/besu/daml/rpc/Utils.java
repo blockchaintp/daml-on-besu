@@ -16,7 +16,7 @@ package com.blockchaintp.besu.daml.rpc;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import com.daml.ledger.participant.state.v1.Offset;
+import com.daml.ledger.offset.Offset;
 import com.google.protobuf.ByteString;
 
 /**

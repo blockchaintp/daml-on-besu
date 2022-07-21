@@ -18,11 +18,11 @@ import java.util.List;
 
 import com.blockchaintp.besu.daml.exceptions.DamlBesuRuntimeException;
 import com.blockchaintp.besu.daml.protobuf.DamlLogEvent;
+import com.daml.ledger.offset.Offset;
 import com.daml.ledger.participant.state.kvutils.OffsetBuilder;
 import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.LedgerReader;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
-import com.daml.ledger.participant.state.v1.Offset;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.slf4j.Logger;

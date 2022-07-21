@@ -18,13 +18,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 import com.daml.ledger.api.health.HealthStatus;
+import com.daml.ledger.offset.Offset;
 import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.CommitMetadata;
 import com.daml.ledger.participant.state.kvutils.api.LedgerReader;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.kvutils.api.LedgerWriter;
-import com.daml.ledger.participant.state.v1.Offset;
-import com.daml.ledger.participant.state.v1.SubmissionResult;
+import com.daml.ledger.participant.state.v2.SubmissionResult;
 import com.daml.telemetry.TelemetryContext;
 
 import org.slf4j.Logger;

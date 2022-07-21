@@ -1,6 +1,6 @@
 package com.blockchaintp.besu.daml.rpc
 
-import com.daml.platform.configuration.MetricsReporter
+import com.daml.metrics.MetricsReporter
 
 import concurrent.duration.{Duration,  NANOSECONDS}
 import scala.util.Try
