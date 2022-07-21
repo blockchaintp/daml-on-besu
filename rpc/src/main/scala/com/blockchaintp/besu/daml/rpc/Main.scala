@@ -33,7 +33,8 @@ import com.daml.ledger.resources.ResourceContext
 import com.daml.ledger.resources.ResourceOwner
 import com.daml.lf.engine.Engine
 import com.daml.logging.LoggingContext
-import com.daml.platform.configuration.LedgerConfiguration
+import com.daml.platform.apiserver.ApiServerConfig
+import com.daml.platform.configuration.InitialLedgerConfiguration
 import com.daml.resources.FutureResourceOwner
 import com.daml.resources.ProgramResource
 import org.slf4j.event.Level
@@ -73,7 +74,8 @@ object Main {
       } yield new KeyValueParticipantState(
         readerWriter,
         readerWriter,
-        createMetrics(participantConfig, config)
+        createMetrics(participantConfig, config),
+        false
       )
     }
 
@@ -94,19 +96,27 @@ object Main {
       )
     }
 
-    override def ledgerConfig(config: Config[ExtraConfig]): LedgerConfiguration =
-      LedgerConfiguration(
-        initialConfiguration = Configuration(
+    override def apiServerConfig(
+         participantConfig: ParticipantConfig,
+         config: Config[ExtraConfig],
+    ): ApiServerConfig =
+      {
+        val updatedConfig = config.copy(configurationLoadTimeout = Duration.ofSeconds(10))
+        super.apiServerConfig(participantConfig, updatedConfig)
+      }
+
+    override def initialLedgerConfig(config: Config[ExtraConfig]): InitialLedgerConfiguration =
+      InitialLedgerConfiguration(
+        configuration = Configuration(
           generation = 1,
-          timeModel = TimeModel(
+          timeModel = LedgerTimeModel(
             avgTransactionLatency = Duration.ofSeconds(1L),
             minSkew = Duration.ofSeconds(40L),
             maxSkew = Duration.ofSeconds(80L)
           ).get,
           maxDeduplicationTime = Duration.ofDays(1)
         ),
-        initialConfigurationSubmitDelay = Duration.ofSeconds(5),
-        configurationLoadTimeout = Duration.ofSeconds(10)
+        delayBeforeSubmitting = Duration.ofSeconds(5)
       )
 
     override def authService(config: Config[ExtraConfig]): AuthService = {
