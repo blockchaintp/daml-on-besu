@@ -36,7 +36,7 @@ import scala.Option;
 
 /**
  * Abstract base class for all readers.
- * 
+ *
  * @param <T>
  */
 public abstract class AbstractJsonRpcReader<T> {

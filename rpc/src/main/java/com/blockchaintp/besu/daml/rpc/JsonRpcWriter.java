@@ -52,7 +52,7 @@ public final class JsonRpcWriter implements LedgerWriter {
 
   /**
    * Creates a JsonRpcWriter
-   * 
+   *
    * @param configuredParticipantId
    *          the participantId
    * @param configuredUrl
