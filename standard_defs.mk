@@ -322,7 +322,7 @@ build/$(REPO)-$(VERSION).tgz:
 	  git archive HEAD --format=zip -9 --output=build/$(REPO)-$(VERSION).tgz; \
 	fi
 
-$(MARKERS)/toolchain_vols:
+$(MARKERS)/toolchain_vols: $(MARKERS)/build_dirs
 	docker volume create toolchain-home-$(ISOLATION_ID)
 	$(BUSYBOX_ROOT) chown -R $(UID):$(GID) $(TOOLCHAIN_HOME)
 	@touch $@
@@ -353,20 +353,20 @@ fix_permissions:
 clean_markers:
 	rm -rf $(CLEAN_DIRS)
 
-$(MARKERS)/build_go: $(MARKERS)/build_toolchain_docker
+$(MARKERS)/build_go: $(MARKERS)/build_dirs $(MARKERS)/build_toolchain_docker
 	$(TOOLCHAIN) bash -c "if [ -r scripts/build ]; then scripts/build; else go build ./...; fi"
 	@touch $@
 
 .PHONY: clean_build_go
-clean_build_go: $(MARKERS)/build_toolchain_docker
+clean_build_go: $(MARKERS)/build_dirs $(MARKERS)/build_toolchain_docker
 	$(TOOLCHAIN) go clean ./...
 	rm -f $(MARKERS)/build_go
 
-$(MARKERS)/build_mvn: $(MARKERS)/build_toolchain_docker
+$(MARKERS)/build_mvn: $(MARKERS)/build_dirs $(MARKERS)/build_toolchain_docker
 	$(DOCKER_MVN) compile
 	@touch $@
 
-$(MARKERS)/package_mvn: $(MARKERS)/build_toolchain_docker
+$(MARKERS)/package_mvn: $(MARKERS)/build_dirs $(MARKERS)/build_toolchain_docker
 	$(DOCKER_MVN) package
 	@touch $@
 
@@ -378,11 +378,11 @@ clean_mvn: $(MARKERS)/build_toolchain_docker
 # <skipTests>true</skipTests> in the maven-surefire-plugin
 # configuration.
 ##
-$(MARKERS)/test_mvn: $(MARKERS)/build_toolchain_docker
+$(MARKERS)/test_mvn: $(MARKERS)/build_dirs $(MARKERS)/build_toolchain_docker
 	$(DOCKER_MVN) -DskipTests=false test
 	@touch $@
 
-$(MARKERS)/test_go: $(MARKERS)/build_toolchain_docker
+$(MARKERS)/test_go: $(MARKERS)/build_dirs $(MARKERS)/build_toolchain_docker
 	$(TOOLCHAIN) go test ./...
 	@touch $@
 
@@ -401,6 +401,7 @@ effective-pom: $(MARKERS)/build_toolchain_docker
 $(MARKERS)/build_dirs:
 	mkdir -p $(CLEAN_DIRS)
 	mkdir -p build
+	mkdir -p $(MARKERS)
 	touch $@
 
 .PHONY: clean_dirs_standard
@@ -410,7 +411,7 @@ clean_dirs_standard:
 .PHONY: clean_dirs
 clean_dirs: clean_dirs_standard
 
-$(MARKERS)/check_ignores:
+$(MARKERS)/check_ignores: $(MARKERS)/build_dirs
 	git check-ignore build
 	git check-ignore $(MARKERS)
 	@touch $@
@@ -437,15 +438,15 @@ gh-create-draft-release:
 	  $(GH_RELEASE) create $(VERSION) -t "$(VERSION)" -F CHANGELOG.md; \
 	fi
 
-$(MARKERS)/analyze_npm: $(MARKERS)/build_toolchain_docker
+$(MARKERS)/analyze_npm: $(MARKERS)/build_dirs $(MARKERS)/build_toolchain_docker
 	$(NPM) run audit
 	@touch $@
 
-$(MARKERS)/build_npm: $(MARKERS)/build_toolchain_docker
+$(MARKERS)/build_npm: $(MARKERS)/build_dirs $(MARKERS)/build_toolchain_docker
 	$(NPM) ci
 	$(NPM) run build
 	@touch $@
 
-$(MARKERS)/test_npm: $(MARKERS)/build_npm
+$(MARKERS)/test_npm: $(MARKERS)/build_dirs $(MARKERS)/build_npm
 	$(NPM) run test
 	@touch $@
