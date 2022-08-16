@@ -3,8 +3,6 @@ include $(MAKEFILE_DIR)/standard_defs.mk
 
 export TEST_SPEC ?= --exclude ConfigManagementServiceIT:CMSetAndGetTimeModel
 
-$(MARKERS): test-dars
-
 clean: clean_mvn clean_dirs_daml clean_containers
 
 distclean: clean_docker
@@ -13,18 +11,20 @@ build: $(MARKERS)/build_mvn $(MARKERS)/build_ledgertest
 
 package: $(MARKERS)/package_mvn $(MARKERS)/package_docker
 
-test: $(MARKERS)/test_mvn $(MARKERS)/test_public_ibft
+test: $(MARKERS)/test-dars $(MARKERS)/test_mvn $(MARKERS)/test_public_ibft
 
 analyze: analyze_sonar_mvn
 
 publish: $(MARKERS)/publish_mvn
 
-test-dars:
+$(MARKERS)/test-dars:
 	mkdir -p test-dars
+	touch $@
 
 .PHONY: clean_dirs_daml
 clean_dirs_daml:
 	rm -rf test-dars
+	rm -f $(MARKERS)/test-dars
 
 $(MARKERS)/build_ledgertest:
 	docker build -f docker/ledger-api-testtool.docker -t \

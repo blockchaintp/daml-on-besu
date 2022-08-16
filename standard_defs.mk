@@ -87,12 +87,16 @@ MAVEN_SETTINGS_VOL = $(shell if [ -n "$(MAVEN_SETTINGS)" ] && [ -r "$(MAVEN_SETT
 
 KUBE_CONFIG_VOL = $(shell if [ -n "$(KUBE_CONFIG)" ] && [ -r "$(KUBE_CONFIG)" ]; then echo -v \
 	$(KUBE_CONFIG):$(TOOLCHAIN_HOME)/.kube/config; fi)
-KUBE_CONFIG_ENV = $(shell if [ -n "$(KUBE_CONFIG)" ] && [ -r "$(KUBE_CONFIG)" ]; then echo -e \
-	KUBECONFIG=$(TOOLCHAIN_HOME)/.kube/config; fi)
+KUBE_CONFIG_ENV = $(shell if [ -n "$(KUBE_CONFIG)" ] && [ -r "$(KUBE_CONFIG)" ]; then echo "-e \
+	KUBECONFIG=$(TOOLCHAIN_HOME)/.kube/config"; fi)
+
+MINIKUBE_HOME ?= $(HOME)/.minikube
+MINIKUBE_VOL = $(shell if [ -n "$(MINIKUBE_HOME)" ] && [ -d "$(MINIKUBE_HOME)" ]; then echo -v \
+	$(MINIKUBE_HOME):$(MINIKUBE_HOME); fi)
 
 TOOL_VOLS = -v toolchain-home-$(ISOLATION_ID):/home/toolchain \
 	$(MAVEN_SETTINGS_VOL) $(KUBE_CONFIG_VOL) \
-	-v $(PWD):/project
+	-v $(PWD):/project $(MINIKUBE_VOL)
 
 TOOL_ENVIRONMENT = -e GITHUB_TOKEN -e MAVEN_HOME=/home/toolchain/.m2 \
 	-e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e FOSSA_API_KEY \
@@ -111,6 +115,8 @@ BUSYBOX_ROOT := $(DOCKER_RUN_ROOT) $(TOOL_VOLS) busybox:latest
 DIVE_ANALYZE = $(TOOL) -v $(DOCKER_SOCK):/var/run/docker.sock \
 	--user toolchain:$(shell getent group docker|awk -F: '{print $$3}') \
 	$(TOOLCHAIN_IMAGE) dive --ci
+
+NPM := $(TOOLCHAIN) npm
 
 ##
 # FOSSA parameters
@@ -142,7 +148,7 @@ distclean: clean
 
 # All compilation tasks
 .PHONY: build
-build: $(MARKERS)
+build: $(MARKERS)/build_dirs
 
 # All tasks which produce a test result
 .PHONY: test
@@ -321,7 +327,7 @@ $(MARKERS)/toolchain_vols:
 	$(BUSYBOX_ROOT) chown -R $(UID):$(GID) $(TOOLCHAIN_HOME)
 	@touch $@
 
-$(MARKERS)/build_toolchain_docker: $(MARKERS) $(MARKERS)/toolchain_vols
+$(MARKERS)/build_toolchain_docker: $(MARKERS)/build_dirs $(MARKERS)/toolchain_vols
 	if ! docker image ls -qq $(TOOLCHAIN_IMAGE) > /dev/null; then \
 	  echo "Pulling toolchain $(TOOLCHAIN_IMAGE)"; \
 	  docker pull -qq $(TOOLCHAIN_IMAGE); \
@@ -392,9 +398,10 @@ effective-pom: $(MARKERS)/build_toolchain_docker
 	$(DOCKER_MVN) help:effective-pom
 
 # Any prerequisite directories, which should also be gitignored
-$(MARKERS):
-	mkdir -p $(MARKERS)
+$(MARKERS)/build_dirs:
+	mkdir -p $(CLEAN_DIRS)
 	mkdir -p build
+	touch $@
 
 .PHONY: clean_dirs_standard
 clean_dirs_standard:
@@ -429,3 +436,16 @@ gh-create-draft-release:
 	if [ "$(RELEASABLE)" = "yes" ];then \
 	  $(GH_RELEASE) create $(VERSION) -t "$(VERSION)" -F CHANGELOG.md; \
 	fi
+
+$(MARKERS)/analyze_npm: $(MARKERS)/build_toolchain_docker
+	$(NPM) run audit
+	@touch $@
+
+$(MARKERS)/build_npm: $(MARKERS)/build_toolchain_docker
+	$(NPM) ci
+	$(NPM) run build
+	@touch $@
+
+$(MARKERS)/test_npm: $(MARKERS)/build_npm
+	$(NPM) run test
+	@touch $@
