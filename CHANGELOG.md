@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* build(deps): update jackson companion dependencies [view commit](https://github.com/blockchaintp/daml-on-besu/commit/22fd2ab8e0ccd68baa88c745137549f31e88edd7)
+* build(deps): Bump jackson-databind from 2.10.5.1 to 2.12.7.1 [view commit](https://github.com/blockchaintp/daml-on-besu/commit/b007cc16358b07415d8c3b18c29bda3cb5a652de)
 * docs(docker): Update copyright headers in changed files [view commit](https://github.com/blockchaintp/daml-on-besu/commit/d5556006798a848fb96eed5ca8017770b10b1c7d)
 * style(docker): minor changes to tidy up formatting for consistency [view commit](https://github.com/blockchaintp/daml-on-besu/commit/c53ed5aecdd6b1cd33b5b19937830402b224f76f)
 * build(docker): use Azul Zulu Docker image instead of zulu-11 package for OpenJDK [view commit](https://github.com/blockchaintp/daml-on-besu/commit/b28a68f015c6be09b519c4c7c8fe75ef99ec09d9)
