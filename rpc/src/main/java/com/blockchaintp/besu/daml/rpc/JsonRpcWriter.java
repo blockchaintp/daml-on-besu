@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Blockchain Technology Partners
+ * Copyright © 2023 Paravela Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -48,7 +48,7 @@ public final class JsonRpcWriter implements LedgerWriter {
 
   /**
    * Creates a JsonRpcWriter
-   * 
+   *
    * @param configuredParticipantId
    *          the participantId
    * @param configuredUrl

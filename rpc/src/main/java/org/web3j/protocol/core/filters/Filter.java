@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 Blockchain Technology Partners
+ * Copyright © 2023 Paravela Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -79,11 +79,11 @@ public abstract class Filter<T> {
        * reported socket timeout exceptions when connected over HTTP to Geth and Parity clients. For
        * examples, refer to https://github.com/web3j/web3j/issues/144 and
        * https://github.com/ethereum/go-ethereum/issues/15243.
-       * 
+       *
        * Hence we consume errors and log them as errors, allowing our polling for changes to resume. The
        * downside of this approach is that users will not be notified of downstream connection issues. But
        * given the intermittent nature of the connection issues, this seems like a reasonable compromise.
-       * 
+       *
        * The alternative approach would be to have another thread that blocks waiting on schedule.get(),
        * catching any Exceptions thrown, and passing them back up to the caller. However, the user would
        * then be required to recreate subscriptions manually which isn't ideal given the aforementioned
